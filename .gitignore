@@ -1,0 +1,140 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Sphinx documentation
+docs/_build/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# PEP 582
+__pypackages__/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE / editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.spyderproject
+.spyproject
+.ropeproject
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# macOS
+.DS_Store
+
+# Ruff
+.ruff_cache
+
+# mkdocs
+/site
+
+# SageMath
+*.sage.py
+
+# Project-specific config
+argussim.toml
+
+# Simulation output directories
+output_*/
+
+# Generated data files
+*.parquet
+*.hsp
+
+# Generated plots
+*.png
+*.pdf
+!docs/source/_static/*.png
+
+# Large FITS files (not packaged data)
+/*.fits
+
+# Data and plot directories
+data/*
+src/argus_sim/data/*
+!src/argus_sim/data/__init__.py
+!src/argus_sim/data/zodiacal_leinert1998.py
+!src/argus_sim/data/throughputs/
+!src/argus_sim/data/layouts/
+!src/argus_sim/data/delivered_psf.fits
+
+# wget download artifacts in data dirs
+src/argus_sim/data/throughputs/wget-log*
+src/argus_sim/data/throughputs/getdata.php*
+plots/
+fields
+
+# Notebook inputs and outputs
+notebooks/data/
