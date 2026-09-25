@@ -86,4 +86,4 @@ python -m argus_sim.lightcurve build RUN_DIR --out STORE
 
 ## License
 
-MIT.
+MIT; see `LICENSE`. Copyright (c) 2026 The University of North Carolina at Chapel Hill.
