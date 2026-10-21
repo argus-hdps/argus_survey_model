@@ -14,7 +14,7 @@ import pytest
 from argus_sim.lightcurve import SurveyRun, bin_lightcurve, inject, limit_mag, sigma_mag, snr
 
 ZP = {
-    "g": {"zp_photons_per_sec": 799614287.18, "band_qe": 0.79196},
+    "beta": {"zp_photons_per_sec": 799614287.18, "band_qe": 0.79196},
     "rho": {"zp_photons_per_sec": 836648274.55, "band_qe": 0.45953},
 }
 
@@ -25,7 +25,7 @@ def _visits(n=40, fast=False, seed=0, nights=1, slots_per_ratchet=15):
     return tbl.Table(
         {
             "mjd": 62000.0 + (k // max(n // nights, 1)) + (k % max(n // nights, 1)) / 1440.0,
-            "band": np.where(k % 2 == 0, "g", "rho"),
+            "band": np.where(k % 2 == 0, "beta", "rho"),
             "tel_id": rng.integers(0, 1200, n),
             "subarray": rng.integers(0, 8, n),
             "exptime_s": np.full(n, 1.0 if fast else 60.0),
@@ -101,7 +101,7 @@ def test_binning_is_unbiased_for_a_source_below_the_single_visit_limit():
     true_ujy = 10 ** ((23.9 - true_mag) / 2.5)
     pull = (np.asarray(b["flux_ujy"]) - true_ujy) / np.asarray(b["flux_err_ujy"])
     assert abs(np.mean(pull)) < 0.15 and 0.8 < np.std(pull) < 1.2
-    assert b["detected"][b["band"] == "g"].mean() > 0.9  # a night of g visits (~10 sigma) detects it
+    assert b["detected"][b["band"] == "beta"].mean() > 0.9  # a night of g visits (~10 sigma) detects it
 
 
 def test_binning_counts_every_measurement_once_and_never_mixes_bands():
@@ -109,9 +109,9 @@ def test_binning_counts_every_measurement_once_and_never_mixes_bands():
     lc = inject(vis, _const(17.0), ZP, rng=np.random.default_rng(8))
     for by in ("night", "ratchet", 0.25):
         b = bin_lightcurve(lc, by=by)
-        for band in ("g", "rho"):
+        for band in ("beta", "rho"):
             assert int(np.sum(b["n"][b["band"] == band])) == int(np.sum(lc["band"] == band))
-        assert set(b["band"]) <= {"g", "rho"}
+        assert set(b["band"]) <= {"beta", "rho"}
     b = bin_lightcurve(lc, by="ratchet")
     np.testing.assert_allclose(b["mag"], 17.0, atol=5 * np.max(b["mag_err"]))
 
@@ -120,7 +120,7 @@ def test_binned_error_shrinks_as_one_over_root_n():
     vis = _visits(n=240, seed=9, nights=1, slots_per_ratchet=240)
     vis["sigma_bkg_e"] = 40.0
     vis["throughput"] = 0.55
-    vis["band"] = "g"
+    vis["band"] = "beta"
     lc = inject(vis, _const(19.0), ZP, rng=np.random.default_rng(10), floor=0.0)
     b = bin_lightcurve(lc, by="ratchet")
     assert len(b) == 1 and int(b["n"][0]) == 240
@@ -170,11 +170,11 @@ def test_query_filters_equal_filtering_the_full_table(run):
     full = run.visits(ra, dec)
     assert len(full) > 0
     lo, hi = np.percentile(np.asarray(full["mjd"]), [25, 75])
-    sub = run.visits(ra, dec, band="g", mjd_min=lo, mjd_max=hi)
-    m = (full["band"] == "g") & (full["mjd"] >= lo) & (full["mjd"] <= hi)
+    sub = run.visits(ra, dec, band="beta", mjd_min=lo, mjd_max=hi)
+    m = (full["band"] == "beta") & (full["mjd"] >= lo) & (full["mjd"] <= hi)
     np.testing.assert_array_equal(np.asarray(sub["mjd"]), np.asarray(full["mjd"][m]))
     np.testing.assert_array_equal(np.asarray(sub["tel_id"]), np.asarray(full["tel_id"][m]))
-    many = run.visits_many(np.array([ra]), np.array([dec]), band="g", mjd_min=lo, mjd_max=hi)
+    many = run.visits_many(np.array([ra]), np.array([dec]), band="beta", mjd_min=lo, mjd_max=hi)
     assert len(many) == len(sub)
 
 

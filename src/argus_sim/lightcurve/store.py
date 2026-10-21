@@ -34,6 +34,7 @@ import pyarrow.parquet as pq
 from argus_sim import get_logger
 
 from .. import skymap_shim as sh
+from ..throughput import canonical_band
 from . import depth as dp
 from . import geometry as g
 
@@ -443,7 +444,8 @@ def build_index(
     if layout is None:
         raise ValueError("The run's provenance.json does not name its ring_layout. Pass layout=.")
     geom = g.Geometry.from_layout(layout)
-    bands = [str(b) for b in manifest["bands"]]
+    bands = [canonical_band(b) for b in manifest["bands"]]
+    band_zeropoints = {canonical_band(b): v for b, v in manifest["band_zeropoints"].items()}
     log.info(f"Building the visit store of {run_dir} ({len(files)} ratchets, layout {layout}) in {index_dir}.")
 
     # ---- stage 1: census and sort
@@ -519,9 +521,7 @@ def build_index(
     tb = cz["tel_band"]
     band_of_tel = np.full(int(geom.tel_id.max()) + 1, -1, np.int8)
     band_of_tel[tb // 256] = tb % 256
-    zps = [
-        (manifest["band_zeropoints"][b]["zp_photons_per_sec"], manifest["band_zeropoints"][b]["band_qe"]) for b in bands
-    ]
+    zps = [(band_zeropoints[b]["zp_photons_per_sec"], band_zeropoints[b]["band_qe"]) for b in bands]
     from .. import c
 
     state = dict(
@@ -600,7 +600,7 @@ def build_index(
         "argus_sim_commit": git["git_hash"],
         "argus_sim": git,
         "bands": bands,
-        "zeropoints": manifest["band_zeropoints"],
+        "zeropoints": band_zeropoints,
         "plan": {
             "start": prov.get("start"),
             "end": prov.get("end"),

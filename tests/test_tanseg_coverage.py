@@ -24,7 +24,7 @@ NIGHT = (atime.Time("2026-06-15T00:00"), atime.Time("2026-06-16T00:00"))
 
 @pytest.fixture(scope="module")
 def layout():
-    return Layout.from_config("A170r_1200", ["g", "rho", "g", "rho"])
+    return Layout.from_config("A170r_1200", ["beta", "rho", "beta", "rho"])
 
 
 @pytest.fixture(scope="module")
@@ -167,12 +167,12 @@ def test_same_band_looks_add(layout):
 def test_depth_formula_matches_ab(layout):
     from argus_sim import ABPhot, SystemThroughput
 
-    tp = SystemThroughput(throughput_loss=c.telescope.throughput_loss, filters={"g": True, "rho": True})
+    tp = SystemThroughput(throughput_loss=c.telescope.throughput_loss, filters={"beta": True, "rho": True})
     ab = ABPhot(collecting_area=c.telescope.collecting_area, throughput_loss=c.telescope.throughput_loss, throughput=tp)
     ivar = np.array([[1e-4, 3e-5]])
     nobs = np.array([[100, 50]], np.uint16)
-    m = minipix_limmag(ivar, nobs, None, ab, "g", 0.8, 5.0, 60.0, 1.0)
-    zp = float(ab.photons_from_mag("g", 0.0).value)
+    m = minipix_limmag(ivar, nobs, None, ab, "beta", 0.8, 5.0, 60.0, 1.0)
+    zp = float(ab.photons_from_mag("beta", 0.0).value)
     rate = 5.0 / np.sqrt(ivar) / 60.0 / 0.8
     np.testing.assert_allclose(m, -2.5 * np.log10(rate / zp), atol=1e-9)
 

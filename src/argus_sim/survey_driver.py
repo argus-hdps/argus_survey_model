@@ -20,6 +20,7 @@ import time
 import numpy as np
 
 from argus_sim import c, get_logger
+from argus_sim.throughput import canonical_band
 
 log = get_logger(__name__)
 
@@ -85,6 +86,7 @@ def configure(args: argparse.Namespace, workdir: str) -> dict:
         c.packing_strategy.layout_file = args.layout
     if args.cycle is not None:
         c.filter_strategy.options = args.cycle.split(",")
+        c.filter_strategy.validate()
     if args.nproc is not None:
         c.nproc = args.nproc
     if args.sim_depth is not None:
@@ -120,7 +122,7 @@ def night_table(manifest: dict) -> list[dict]:
                     "night": nt["night"],
                     "mjd_min": nt["mjd_min"],
                     "mjd_max": nt["mjd_max"],
-                    "band": band,
+                    "band": canonical_band(band),
                     "n_minipix": nt[f"{band}_n_minipix"],
                     "area_deg2": nt.get(f"{band}_area_deg2"),
                     "median_limmag": nt[f"{band}_median_limmag"],
@@ -174,7 +176,7 @@ def span_summary(workdir: str, manifest: dict, chunk: int = 2048) -> dict:
             mags.append((-2.5 * np.log10(rate / zps[band]["zp_photons_per_sec"])).astype(np.float32))
             ns.append(n[ok].astype(np.float32))
         m, n = np.concatenate(mags), np.concatenate(ns)
-        out[band] = {
+        out[canonical_band(band)] = {
             "n_minipix": int(len(m)),
             "area_deg2": float(len(m) * MINIPIX_AREA_DEG2),
             "median_limmag": float(np.median(m)),

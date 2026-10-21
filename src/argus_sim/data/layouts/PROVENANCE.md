@@ -23,8 +23,9 @@ layout with bands assigned by the strip rule.
 
 ## A170r_1200_bands_alt5_2026-09-23.csv (A170r_1200 band table)
 
-sha256 51f8b087a78b1f69244a4ebfd334aeb50462eafc21dc6a9959f7755460d4da4c; 600 OTAs in beta (`b`, the ArgusSim `g`
-band) and 600 in rho. The assignment maximises band alternation between successive 16-minute pointings (ratchets)
+sha256 1a380a9bf8bcb48309572cb43a1063208562e1dd8e5fd841200e37f0daa431ba; 600 OTAs in beta (`b`) and 600 in rho. The
+header comments were updated on 2026-10-21 to use the name beta instead of the old `g`; the data rows are unchanged. Stores built
+before then record the earlier file's sha256, 51f8b087a78b1f69244a4ebfd334aeb50462eafc21dc6a9959f7755460d4da4c. The assignment maximises band alternation between successive 16-minute pointings (ratchets)
 while balancing the two bands on every 0.5-deg dec line. The layout is E/W mirror-symmetric: 598 twin pairs of OTAs
 have identical dec-line coverage and sit on opposite mounts. The table gives every pair opposite bands, so each
 0.5-deg dec line is balanced exactly, or to 3.7% on the lines of ring 0. The array-frame alternation between

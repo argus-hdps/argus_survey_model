@@ -178,12 +178,12 @@ def test_source_shot_noise_converges_to_bkg_only_in_sky_dominated_regime(
     assert diff < 0.5, f"In sky-dominated regime, source shot noise correction should be < 0.5 mag, got {diff:.4f} mag"
 
 
-RANK_FILTERS = ["A", "g", "r", "i", "r+i+z", "i+z"]
+RANK_FILTERS = ["beta", "rho"]
 
 
 @pytest.fixture(scope="module")
 def system_response_matrix():
-    """Build the 6 x N_wavelength system response matrix.
+    """Build the 2 x N_wavelength system response matrix.
 
     Each row is filter_transmission * optics * QE * atmosphere evaluated
     on the standard wavelength grid.
@@ -231,10 +231,10 @@ def test_matrix_rank_equals_subset_size(system_response_matrix, subset):
 
 
 # ---------------------------------------------------------------------------
-# Depth ranking property test: A > g > i across observing conditions
+# Moonlight depth-gain property test: gain(beta) > gain(rho) across observing conditions
 # ---------------------------------------------------------------------------
 
-DEPTH_BANDS = ["A", "g", "r", "i"]
+DEPTH_BANDS = ["beta", "rho"]
 _THROUGHPUT_LOSS_REF = 0.75
 _EXPTIME = 60.0
 _SNR = 5.0
@@ -369,60 +369,23 @@ def _nearest_bright_sky(model, alt):
     alt=st.floats(min_value=33.0, max_value=90.0, allow_nan=False, allow_infinity=False),
 )
 @settings(max_examples=200, deadline=None)
-def test_depth_ranking_A_gt_g_gt_i(depth_model, seeing, throughput_loss, alt):
-    """Depth ordering A > g > i holds across observing conditions.
-
-    The A (open) filter has the widest spectral acceptance, collecting more
-    photons from a flat-spectrum source than g, which in turn is wider than i.
-    More collected photons means fainter detectable sources (larger limiting
-    magnitude).  The ordering holds over the tested ranges of seeing,
-    throughput loss and sky brightness.
-    """
-    sky_comp = _nearest_sky(depth_model, alt)
-
-    depth_A = _limmag_for_band("A", depth_model, seeing, throughput_loss, sky_comp)
-    depth_g = _limmag_for_band("g", depth_model, seeing, throughput_loss, sky_comp)
-    depth_i = _limmag_for_band("i", depth_model, seeing, throughput_loss, sky_comp)
-
-    assert depth_A > depth_g, (
-        f"Expected depth(A)={depth_A:.3f} > depth(g)={depth_g:.3f} "
-        f'[seeing={seeing:.2f}", loss={throughput_loss:.2f}, alt={alt:.1f}°]'
-    )
-    assert depth_g > depth_i, (
-        f"Expected depth(g)={depth_g:.3f} > depth(i)={depth_i:.3f} "
-        f'[seeing={seeing:.2f}", loss={throughput_loss:.2f}, alt={alt:.1f}°]'
-    )
-
-
-@given(
-    seeing=st.floats(min_value=0.5, max_value=2.0, allow_nan=False, allow_infinity=False),
-    throughput_loss=st.floats(min_value=0.6, max_value=0.9, allow_nan=False, allow_infinity=False),
-    alt=st.floats(min_value=33.0, max_value=90.0, allow_nan=False, allow_infinity=False),
-)
-@settings(max_examples=200, deadline=None)
-def test_dark_sky_gain_monotonic_gri(depth_model, seeing, throughput_loss, alt):
-    """Dark-sky depth gain follows gain(g) > gain(r) > gain(i).
+def test_dark_sky_gain_beta_gt_rho(depth_model, seeing, throughput_loss, alt):
+    """Dark-sky depth gain is larger in beta than in rho.
 
     Bluer bands suffer more sky background increase from moonlight because
     lunar scattered light peaks in the blue.  The depth *gain* from going
-    dark (new moon minus full moon) is therefore largest for g and
-    smallest for i.  The A filter spans blue+red so it does not follow
-    simple wavelength ordering; only g/r/i are tested.
+    dark (new moon minus full moon) is therefore larger for beta than rho.
     """
     dark_comp = _nearest_sky(depth_model, alt)
     bright_comp = _nearest_bright_sky(depth_model, alt)
 
     gains = {}
-    for band in ("g", "r", "i"):
+    for band in ("beta", "rho"):
         depth_dark = _limmag_for_band(band, depth_model, seeing, throughput_loss, dark_comp)
         depth_bright = _limmag_for_band(band, depth_model, seeing, throughput_loss, bright_comp)
         gains[band] = depth_dark - depth_bright
 
-    assert gains["g"] > gains["r"], (
-        f"Expected gain(g)={gains['g']:.4f} > gain(r)={gains['r']:.4f} "
-        f'[seeing={seeing:.2f}", loss={throughput_loss:.2f}, alt={alt:.1f}°]'
-    )
-    assert gains["r"] > gains["i"], (
-        f"Expected gain(r)={gains['r']:.4f} > gain(i)={gains['i']:.4f} "
+    assert gains["beta"] > gains["rho"], (
+        f"Expected gain(beta)={gains['beta']:.4f} > gain(rho)={gains['rho']:.4f} "
         f'[seeing={seeing:.2f}", loss={throughput_loss:.2f}, alt={alt:.1f}°]'
     )

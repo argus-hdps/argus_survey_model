@@ -11,7 +11,7 @@ from argus_sim import coverage_exact as ce
 
 @pytest.fixture(scope="module")
 def layout():
-    return ce.Layout.from_config("A170r_1200", ["g", "rho", "g", "rho"])
+    return ce.Layout.from_config("A170r_1200", ["beta", "rho", "beta", "rho"])
 
 
 @pytest.fixture(scope="module")

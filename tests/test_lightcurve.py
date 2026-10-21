@@ -15,7 +15,7 @@ import pytest
 from argus_sim.lightcurve import SurveyRun, inject, limit_mag, sigma_mag, snr
 
 ZP = {
-    "g": {"zp_photons_per_sec": 799614287.18, "band_qe": 0.79196},
+    "beta": {"zp_photons_per_sec": 799614287.18, "band_qe": 0.79196},
     "rho": {"zp_photons_per_sec": 836648274.55, "band_qe": 0.45953},
 }
 MAG_ERR_PER_INV_SNR = 2.5 / np.log(10)
@@ -26,7 +26,7 @@ def _visits(n=40, fast=False, seed=0):
     return tbl.Table(
         {
             "mjd": 62000.0 + np.arange(n) / 1440.0,
-            "band": np.where(np.arange(n) % 2 == 0, "g", "rho"),
+            "band": np.where(np.arange(n) % 2 == 0, "beta", "rho"),
             "tel_id": rng.integers(0, 1200, n),
             "subarray": rng.integers(0, 8, n),
             "exptime_s": np.full(n, 1.0 if fast else 60.0),

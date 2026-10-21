@@ -24,7 +24,7 @@ def survey():
 
 @pytest.fixture(scope="module")
 def bp(survey):
-    return build_band_params(["g", "rho"], survey.throughputs, survey.ab)
+    return build_band_params(["beta", "rho"], survey.throughputs, survey.ab)
 
 
 @pytest.fixture(scope="module")
@@ -32,13 +32,13 @@ def small_tables(survey):
     grid = survey_mod.SEEING_TABLE_ARCSEC
     try:
         survey_mod.SEEING_TABLE_ARCSEC = np.geomspace(0.6, 2.4, 5)
-        return survey_mod.build_sharpness_tables(survey.psf, ["g", "rho"])
+        return survey_mod.build_sharpness_tables(survey.psf, ["beta", "rho"])
     finally:
         survey_mod.SEEING_TABLE_ARCSEC = grid
 
 
 # ------------------------------------------------------------------ exact signal efficiency
-@pytest.mark.parametrize("band", ["g", "rho"])
+@pytest.mark.parametrize("band", ["beta", "rho"])
 @pytest.mark.parametrize("airmass", [1.0, 1.37, 2.0])
 def test_signal_throughput_is_the_exact_photon_rate_integral(survey, bp, band, airmass):
     tp = survey.throughputs
@@ -53,7 +53,7 @@ def test_signal_throughput_is_the_exact_photon_rate_integral(survey, bp, band, a
 
 def test_band_summaries_derive_from_the_table(bp):
     # signal_tp_no_atm is eta(0) / band_qe and atm_tp_am1 is eta(1) / eta(0), both from the exact table
-    tp_g = bp["g"]
+    tp_g = bp["beta"]
     eta = float(signal_throughput(tp_g, 1.0))
     assert eta > 0 and tp_g["signal_tp_table"][0][0] == 0.0
     np.testing.assert_allclose(tp_g["atm_tp_am1"], eta / tp_g["signal_tp_no_atm"], rtol=1e-3)
@@ -71,24 +71,24 @@ def test_default_psf_is_the_delivered_psf(survey):
 
 
 def test_fixed_field_angle_ignores_the_rng(survey):
-    a = survey.psf.with_seeing(1.0, band="g", field_angle_deg=1.9, pixel_phase=(0, 0), rng=np.random.default_rng(1))
-    b = survey.psf.with_seeing(1.0, band="g", field_angle_deg=1.9, pixel_phase=(0, 0), rng=np.random.default_rng(2))
+    a = survey.psf.with_seeing(1.0, band="beta", field_angle_deg=1.9, pixel_phase=(0, 0), rng=np.random.default_rng(1))
+    b = survey.psf.with_seeing(1.0, band="beta", field_angle_deg=1.9, pixel_phase=(0, 0), rng=np.random.default_rng(2))
     np.testing.assert_array_equal(a[0], b[0])
-    on_axis = survey.psf.with_seeing(1.0, band="g", field_angle_deg=0.0, pixel_phase=(0, 0))[1]
+    on_axis = survey.psf.with_seeing(1.0, band="beta", field_angle_deg=0.0, pixel_phase=(0, 0))[1]
     assert a[1] != on_axis  # the delivered EE50 grows with field angle
 
 
 def test_sharpness_table_interpolates_the_direct_psf(survey, small_tables):
-    angles, grid, S = small_tables["g"]
+    angles, grid, S = small_tables["beta"]
     assert S.shape == (7, 5) and np.all(np.diff(S, axis=1) < 0)  # sharper in better seeing
     fa, fwhm = float(angles[5]), 1.3  # between grid points 1.2 and 1.7
     direct = np.mean(
         [
-            np.sum(survey.psf.with_seeing(fwhm, band="g", field_angle_deg=fa, pixel_phase=ph)[0] ** 2)
+            np.sum(survey.psf.with_seeing(fwhm, band="beta", field_angle_deg=fa, pixel_phase=ph)[0] ** 2)
             for ph in survey_mod.PIXEL_PHASES
         ]
     )
-    np.testing.assert_allclose(survey_mod.sharpness_at(small_tables["g"], fa, fwhm), direct, rtol=0.02)
+    np.testing.assert_allclose(survey_mod.sharpness_at(small_tables["beta"], fa, fwhm), direct, rtol=0.02)
 
 
 # ------------------------------------------------------------------ seeing x X^0.6
@@ -126,7 +126,7 @@ def test_forward_mc_evaluates_the_psf_at_the_grid_point_airmass(monkeypatch):
         NoiseBudget(read_noise=1.2 * u.electron, dark_current=0.0 * u.electron / u.second),
         psf,
         ab,
-        build_band_params(["g"], tp, ab),
+        build_band_params(["beta"], tp, ab),
         pt,
         0.9,
         1.0,
@@ -188,7 +188,7 @@ def test_forward_mc_draws_the_transparency_prior(monkeypatch, tmp_path):
     assert seen and all(p.dist == "cloud_lognormal" for p in seen)
 
 
-def _grid(alt, az, band="g"):
+def _grid(alt, az, band="beta"):
     return tbl.Table(
         {"alt": np.asarray(alt, float), "az": np.asarray(az, float), "filter": np.array([band] * len(alt))}
     )
@@ -237,7 +237,7 @@ def test_per_pair_weights_equal_tile_weights_when_constant():
 
     # a 2-deg dec band through the footprint keeps the accumulators small (full sky is ~25 GB: probe, not test)
     eng = TansegCoverage(
-        Layout.from_config("A170r_1200", ["g", "rho", "g", "rho"]), backend="numpy", dec_range=(30.0, 32.0)
+        Layout.from_config("A170r_1200", ["beta", "rho", "beta", "rho"]), backend="numpy", dec_range=(30.0, 32.0)
     )
     R = icrs_to_array_rotation(atime.Time("2026-06-15T06:00"), 0.0)
     p = eng.pairs(R)
@@ -262,7 +262,7 @@ SENSOR_DEG = (3.2529, 2.4425)
 PHASES = ((0.25, 0.75), (0.75, 0.25), (0.0, 0.5), (0.5, 0.0))
 
 
-@pytest.mark.parametrize("band", ["g", "rho"])
+@pytest.mark.parametrize("band", ["beta", "rho"])
 def test_delivered_psf_ee50_spans_two_to_three_pixels(band):
     # seeing-free pixelated EE50 of the default PSF: 2.0-3.0 px across the field, area mean ~2.3 px over the sensor
     z = DeliveredPSF.from_config(Config(sim_version="t"))
@@ -289,12 +289,12 @@ def test_ee50_profile_broadens_the_delivered_psf(tmp_path):
     # an optional profile with a larger target broadens the optics-only PSF to meet it; a smaller one does nothing
     cfg = Config(sim_version="t")
     base = DeliveredPSF.from_config(cfg)
-    _, _, hfd0 = base.with_seeing(0.0, band="g", field_angle_deg=0.0, pixel_phase=(0, 0), return_optical_hfd=True)
+    _, _, hfd0 = base.with_seeing(0.0, band="beta", field_angle_deg=0.0, pixel_phase=(0, 0), return_optical_hfd=True)
     path = tmp_path / "profile.csv"
-    path.write_text(f"band,theta_deg,target_um\ng,0.0,{2 * hfd0}\ng,2.1,{2 * hfd0}\nrho,0.0,1.0\nrho,2.1,1.0\n")
+    path.write_text(f"band,theta_deg,target_um\nbeta,0.0,{2 * hfd0}\nbeta,2.1,{2 * hfd0}\nrho,0.0,1.0\nrho,2.1,1.0\n")
     cfg.telescope.ee50_profile_path = str(path)
     wide = DeliveredPSF.from_config(cfg)
-    _, _, hfd1 = wide.with_seeing(0.0, band="g", field_angle_deg=0.0, pixel_phase=(0, 0), return_optical_hfd=True)
+    _, _, hfd1 = wide.with_seeing(0.0, band="beta", field_angle_deg=0.0, pixel_phase=(0, 0), return_optical_hfd=True)
     assert hfd1 == pytest.approx(2 * hfd0, rel=0.03)
     same = [p.with_seeing(1.0, band="rho", field_angle_deg=1.0, pixel_phase=(0, 0))[0] for p in (base, wide)]
     np.testing.assert_array_equal(same[0], same[1])

@@ -47,10 +47,10 @@ def test_explicit_extents_win():
 def test_table_applies_only_to_equal_two_band_cycles():
     from argus_sim.ring_layout import table_applies
 
-    assert table_applies(["g", "rho", "g", "rho"])
-    assert table_applies(["rho", "g"])
-    assert not table_applies(["g", "g", "rho"])
-    assert not table_applies(["g", "r", "i", "g"])
+    assert table_applies(["beta", "rho", "beta", "rho"])
+    assert table_applies(["rho", "beta"])
+    assert not table_applies(["beta", "beta", "rho"])
+    assert not table_applies(["beta"])
 
 
 def _cradle(layout, options):
@@ -65,23 +65,23 @@ def _cradle(layout, options):
 
 
 def test_default_uses_its_band_table():
-    cp = _cradle(None, ["g", "rho", "g", "rho"])
+    cp = _cradle(None, ["beta", "rho", "beta", "rho"])
     f = np.asarray(cp.cam_pointings["filter"])
     assert cp.band_assignment == "table:A170r_1200_bands_alt5_2026-09-23.csv"
-    assert ((f == "g").sum(), (f == "rho").sum()) == (600, 600)
+    assert ((f == "beta").sum(), (f == "rho").sum()) == (600, 600)
 
 
 def test_strip_rule_still_selectable():
-    cp = _cradle("A170r_1200-strips", ["g", "rho", "g", "rho"])
+    cp = _cradle("A170r_1200-strips", ["beta", "rho", "beta", "rho"])
     f = np.asarray(cp.cam_pointings["filter"])
     assert cp.band_assignment.startswith("strips:")
-    n_g, n_rho = (f == "g").sum(), (f == "rho").sum()
-    assert n_g + n_rho == 1200
-    assert 0.45 < n_g / 1200 < 0.55
+    n_beta, n_rho = (f == "beta").sum(), (f == "rho").sum()
+    assert n_beta + n_rho == 1200
+    assert 0.45 < n_beta / 1200 < 0.55
 
 
 def test_two_to_one_falls_back_to_strips():
-    cp = _cradle(None, ["g", "g", "rho"])
+    cp = _cradle(None, ["beta", "beta", "rho"])
     assert cp.band_assignment.startswith("strips:")
 
 
@@ -90,9 +90,9 @@ def test_provenance_names_band_assignment():
 
     old = list(c.filter_strategy.options)
     try:
-        c.filter_strategy.options = ["g", "rho", "g", "rho"]
+        c.filter_strategy.options = ["beta", "rho", "beta", "rho"]
         assert layout_state()["band_assignment"] == "table:A170r_1200_bands_alt5_2026-09-23.csv"
-        c.filter_strategy.options = ["g", "g", "rho"]
+        c.filter_strategy.options = ["beta", "beta", "rho"]
         assert layout_state()["band_assignment"] == "strips"
     finally:
         c.filter_strategy.options = old

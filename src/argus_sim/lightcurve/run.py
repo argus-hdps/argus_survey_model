@@ -10,6 +10,7 @@ import astropy.table as tbl
 import numpy as np
 
 from .. import skymap_shim as sh
+from ..throughput import canonical_band
 from . import geometry as g
 from . import photometry
 from .storage import Storage
@@ -56,8 +57,12 @@ class SurveyRun:
                 f"The visit store has format {self.meta['format_version']}; this code reads format {FORMAT_VERSION}. "
                 "Rebuild it with: python -m argus_sim.lightcurve build RUN_DIR --out STORE_DIR"
             )
-        self.bands = [str(b) for b in self.meta["bands"]]
-        self.zeropoints = {b: dict(v) for b, v in self.meta["zeropoints"].items()}
+        self.bands = [canonical_band(b) for b in self.meta["bands"]]
+        self.zeropoints = {canonical_band(b): dict(v) for b, v in self.meta["zeropoints"].items()}
+        self._depth_groups = {
+            f"{canonical_band(k.split('/', 1)[0])}/{k.split('/', 1)[1]}": v
+            for k, v in self.meta["depth"]["row_groups"].items()
+        }
         self.periods = [*self.meta["periods"], "all"]
         r = self.store.load_npz("ratchets.npz")
         self.ratchets = tbl.Table({k: r[k] for k in r if r[k].ndim == 1})
@@ -122,7 +127,9 @@ class SurveyRun:
         """Return the survey's nightly summary: one row per night and band (depths, areas, Moon, weather)."""
         import pyarrow.parquet as pq
 
-        return tbl.Table.from_pandas(pq.read_table(io.BytesIO(self.store.read_bytes("nights.parquet"))).to_pandas())
+        df = pq.read_table(io.BytesIO(self.store.read_bytes("nights.parquet"))).to_pandas()
+        df["band"] = df["band"].map(canonical_band)
+        return tbl.Table.from_pandas(df)
 
     def depth_map(self, band: str, period: str = "all") -> tbl.Table:
         """Return the tile depth map of one band and period (a label of ``run.periods``; "all" is the whole run).
@@ -136,7 +143,7 @@ class SurveyRun:
         morning that ends each night.
         """
         key = f"{band}/{period}"
-        groups = self.meta["depth"]["row_groups"]
+        groups = self._depth_groups
         if key not in groups:
             raise ValueError(
                 f"No depth map for band {band!r} and period {period!r}; bands {self.bands}, periods {self.periods}."

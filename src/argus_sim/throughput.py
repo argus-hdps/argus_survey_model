@@ -12,22 +12,27 @@ import scipy.interpolate as sint
 
 from .utils import dotdict
 
+# The two Argus survey bands.  The other entries of OPTICS_EFFICIENCY (V, SQM) are reference bands for the sky model.
+SURVEY_BANDS = ("beta", "rho")
+# Band names written by older versions into survey runs and visit stores; readers translate them with canonical_band.
+LEGACY_BAND_NAMES = {"g": "beta"}
+
+
+def canonical_band(name) -> str:
+    """Return the current name of a band read from a survey run or visit store (``"g"`` becomes ``"beta"``)."""
+    return LEGACY_BAND_NAMES.get(str(name), str(name))
+
+
 # Efficiency of the telescope optics (the fraction of the light entering the aperture that the optics deliver to the
 # sensor), one band average per filter.  Each value is the optics transmission averaged over the filter x QE x
 # atmosphere photon-rate response of that filter at airmass 1.15, the typical survey airmass, with the weighting
 # build_band_params uses for the signal.
 # Scaled by throughput_loss.
 OPTICS_EFFICIENCY: Dict[str, float] = {
-    "A": 0.812,
+    "beta": 0.785,
+    "rho": 0.835,
     "V": 0.878,
     "sqm": 0.834,
-    "g": 0.787,
-    "r": 0.866,
-    "i": 0.751,
-    "r+i+z": 0.824,
-    "r+i": 0.832,
-    "i+z": 0.736,
-    "rho": 0.837,
 }
 
 
@@ -43,7 +48,7 @@ class SystemThroughput:
     filters : Dict[str, bool], optional
         Dictionary specifying which filters to include. Keys are filter names,
         values are booleans. Default enables all filters.
-        Available filters: 'A', 'V', 'sqm', 'g', 'r', 'i', 'r+i+z', 'r+i', 'i+z', 'rho'
+        Available filters: 'beta' and 'rho' (the two Argus survey bands), and the reference bands 'V' and 'sqm'
 
     Attributes
     ----------
@@ -76,28 +81,19 @@ class SystemThroughput:
 
         # Filter specs: file, x_col, y_col, x_scale, y_scale
         filter_files = {
-            "A": {
-                "file": "argus_A.csv",
-                "x_col": "Wavelength (nm)",
-                "y_col": "T",
-                "x_scale": 1,
-                "y_scale": 1 / 100,
-            },
+            "beta": {"file": "argus_beta_ct446.csv", "x_col": "wav_nm", "y_col": "T", "x_scale": 1, "y_scale": 1},
+            "rho": {"file": "argus_rho_ct699.csv", "x_col": "wav_nm", "y_col": "T", "x_scale": 1, "y_scale": 1},
             "V": {"file": "GCPD_Johnson.V.dat", "x_col": "col1", "y_col": "col2", "x_scale": 1 / 10, "y_scale": 1},
             "sqm": {"file": "Cameras_SQM.CM500.dat", "x_col": "col1", "y_col": "col2", "x_scale": 1 / 10, "y_scale": 1},
-            "g": {"file": "argus_g.csv", "x_col": "Wavelength(nm)", "y_col": "T", "x_scale": 1, "y_scale": 1 / 100},
-            "r": {"file": "argus_r.csv", "x_col": "Wavelength", "y_col": "T", "x_scale": 1, "y_scale": 1 / 100},
-            "i": {"file": "argus_i.csv", "x_col": "Wavelength", "y_col": "T", "x_scale": 1, "y_scale": 1 / 100},
-            "r+i+z": {"file": "longpass_550nm.csv", "x_col": "wav_nm", "y_col": "T", "x_scale": 1, "y_scale": 1},
-            "i+z": {"file": "longpass_700nm.csv", "x_col": "wav_nm", "y_col": "T", "x_scale": 1, "y_scale": 1},
-            "r+i": {"file": "bandpass_560_850nm.csv", "x_col": "wav_nm", "y_col": "T", "x_scale": 1, "y_scale": 1},
-            "rho": {"file": "bandpass_560_825nm.csv", "x_col": "wav_nm", "y_col": "T", "x_scale": 1, "y_scale": 1},
         }
 
         # If no filters specified, enable all. If filters specified, default to False
         if filters is None:
             self.active_filters = {name: True for name in filter_files}
         else:
+            unknown = sorted(set(filters) - set(filter_files))
+            if unknown:
+                raise ValueError(f"Unknown filters {unknown}; available: {sorted(filter_files)}")
             self.active_filters = {name: filters.get(name, False) for name in filter_files}
 
         # V filter is always needed for spectral sky V-band normalization

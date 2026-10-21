@@ -6,6 +6,7 @@ import pytest
 
 from argus_sim.config import (
     Config,
+    ConfigException,
     FilterStrategy,
     Observatory,
     Output,
@@ -92,9 +93,16 @@ def test_packing_strategy_defaults():
 def test_filter_strategy_defaults():
     """Test default values for FilterStrategy."""
     filter_strategy = FilterStrategy()
-    assert filter_strategy.options == ["g", "rho", "g", "rho"]
-    assert filter_strategy.band == "g"
+    assert filter_strategy.options == ["beta", "rho", "beta", "rho"]
+    assert filter_strategy.band == "beta"
     assert filter_strategy.cell_size is None
+
+
+@pytest.mark.parametrize("kw", [{"options": ["g", "rho"]}, {"band": "g"}, {"options": ["beta", "r+i"]}])
+def test_filter_strategy_rejects_unknown_bands(kw):
+    """Only beta and rho are survey bands; the old name "g" and removed bands fail at configuration time."""
+    with pytest.raises(ConfigException, match="Unknown filter bands"):
+        FilterStrategy(**kw)
 
 
 def test_survey_defaults():

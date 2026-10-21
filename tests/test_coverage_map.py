@@ -163,9 +163,9 @@ class TestBoxOrientation:
 
         from argus_sim.coverage_map import build_filter_maps
 
-        cam = tbl.Table({"alt_center": [60.0], "az_center": [180.0], "rot_deg": [0.0], "filter": ["g"]})
+        cam = tbl.Table({"alt_center": [60.0], "az_center": [180.0], "rot_deg": [0.0], "filter": ["beta"]})
         maps = build_filter_maps(cam, 3.259 * u.deg, 2.446 * u.deg, 10, 1024)
-        m = maps["g"]
+        m = maps["beta"]
         az, alt = hsp.HealSparseMap.valid_pixels_pos(m, lonlat=True)
         az_extent = (np.ptp(az) * np.cos(np.radians(60.0))) if len(az) else 0.0
         alt_extent = np.ptp(alt)

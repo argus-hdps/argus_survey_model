@@ -65,7 +65,7 @@ class SpectralSky:
     ab : ABPhot
         AB photometry object for V-band calibration.
     band : str
-        Observation band name (e.g. 'g', 'r', 'i', 'A').
+        Observation band name (``beta`` or ``rho``; ``V`` and ``sqm`` are also available).
     throughputs_dir : str, optional
         Directory containing spectral template files.
 
@@ -188,7 +188,7 @@ def build_band_params(
     Parameters
     ----------
     bands : set[str]
-        Filter names (e.g. ``{"g", "rho"}``).
+        Filter names (e.g. ``{"beta", "rho"}``).
     throughputs : SystemThroughput
         System throughput curves.
     ab : ABPhot
@@ -207,6 +207,8 @@ def build_band_params(
     qe = np.asarray(getattr(throughputs.qe_freq, "value", throughputs.qe_freq), dtype=np.float64)
     atm = np.asarray(throughputs.filt_freq.atmosphere, dtype=np.float64)
     for band in bands:
+        if band not in throughputs.optics:
+            raise ValueError(f"Band {band!r} is not loaded; available: {sorted(throughputs.optics)}")
         resp = np.asarray(throughputs.filt_freq[band], dtype=np.float64)
         optics = float(throughputs.optics[band])
         spectral_sky = SpectralSky(throughputs, ab, band)

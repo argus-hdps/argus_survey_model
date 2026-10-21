@@ -329,7 +329,7 @@ class TestWindowRegistry:
 # --- Helpers for CadenceAccumulator tests ---
 
 
-def _make_ratchet_df(hpx, noise, source_shot, exptime=30.0, band="g"):
+def _make_ratchet_df(hpx, noise, source_shot, exptime=30.0, band="beta"):
     """Build a minimal ratchet data dict with the required keys."""
     return {
         "healpix": np.asarray(hpx),
@@ -396,7 +396,7 @@ class TestCadenceAccumulator:
 
         acc.ingest(0, df)
 
-        hsmap = _read_map(acc, "night", 0, "g")
+        hsmap = _read_map(acc, "night", 0, "beta")
         bkg_noise_sq = noise**2 - source_shot**2
         expected_inv = 1.0 / bkg_noise_sq
 
@@ -421,7 +421,7 @@ class TestCadenceAccumulator:
         acc.ingest(0, df1)
         acc.ingest(1, df2)
 
-        hsmap = _read_map(acc, "night", 0, "g")
+        hsmap = _read_map(acc, "night", 0, "beta")
         bkg1 = noise1**2 - shot1**2
         bkg2 = noise2**2 - shot2**2
         expected_inv = 1.0 / bkg1 + 1.0 / bkg2
@@ -438,11 +438,11 @@ class TestCadenceAccumulator:
         acc, _, _ = _simple_accumulator(n_ratchets=1)
         hpx = np.array([100, 100, 200])
         df = _make_ratchet_df(hpx, [10.0, 12.0, 20.0], [3.0, 2.0, 4.0], exptime=30.0)
-        df["band"] = np.array(["g", "rho", "g"])
+        df["band"] = np.array(["beta", "rho", "beta"])
 
         acc.ingest(0, df)
 
-        g = _read_map(acc, "night", 0, "g").get_values_pix([100, 200])
+        g = _read_map(acc, "night", 0, "beta").get_values_pix([100, 200])
         rho = _read_map(acc, "night", 0, "rho").get_values_pix([100])
         np.testing.assert_array_equal(g["n_obs"], [1, 1])
         np.testing.assert_array_equal(rho["n_obs"], [1])
@@ -462,7 +462,7 @@ class TestCadenceAccumulator:
         data = _make_ratchet_df(np.array([100, 200]), np.array([10.0, 20.0]), np.array([3.0, 4.0]))
 
         acc.ingest(0, data)
-        hsmap = _read_map(acc, "night", 0, "g")
+        hsmap = _read_map(acc, "night", 0, "beta")
         assert hsmap.valid_pixels.size == 2
 
     def test_finalize_writes_hsp_files(self):
@@ -480,7 +480,7 @@ class TestCadenceAccumulator:
             assert len(night_windows) == 1
             band_files = night_windows[0]["bands"]
             assert len(band_files) == 1
-            assert band_files[0]["band"] == "g"
+            assert band_files[0]["band"] == "beta"
             fpath = os.path.join(tmpdir, band_files[0]["file"])
             assert os.path.isfile(fpath)
 
@@ -607,7 +607,7 @@ class TestCadenceAccumulator:
         df = _make_ratchet_df(hpx, noise, source_shot)
 
         acc.ingest(0, df)
-        hsmap = _read_map(acc, "night", 0, "g")
+        hsmap = _read_map(acc, "night", 0, "beta")
         assert hsmap.valid_pixels.size == 1
         assert 200 in hsmap.valid_pixels
 
@@ -620,7 +620,7 @@ class TestCadenceAccumulator:
         data = _make_ratchet_df(hpx, noise, source_shot, exptime=30.0)
 
         acc.ingest(0, data)
-        hsmap = _read_map(acc, "night", 0, "g")
+        hsmap = _read_map(acc, "night", 0, "beta")
         vals = hsmap.get_values_pix(np.array([100]))
 
         bkg1 = noise[0] ** 2 - source_shot[0] ** 2
@@ -645,7 +645,7 @@ class TestCadenceAccumulator:
             np.array([shot_val]),
         )
         acc.ingest(0, df)
-        hsmap = _read_map(acc, "night", 0, "g")
+        hsmap = _read_map(acc, "night", 0, "beta")
         vals = hsmap.get_values_pix(np.array([100]))
         assert vals["inv_bkg_noise_sq_sum"][0] > 0
 
@@ -661,7 +661,7 @@ class TestCadenceAccumulator:
             df = _make_ratchet_df(hpx, np.array([10.0]), np.array([3.0]))
             acc.ingest(r, df)
 
-        hsmap = _read_map(acc, "night", 0, "g")
+        hsmap = _read_map(acc, "night", 0, "beta")
         vals = hsmap.get_values_pix(hpx)
         assert vals["n_obs"][0] == n_ratchets
 
@@ -674,7 +674,7 @@ class TestCadenceAccumulator:
             df = _make_ratchet_df(hpx, np.array([10.0]), np.array([3.0]), exptime=exp)
             acc.ingest(r, df)
 
-        hsmap = _read_map(acc, "night", 0, "g")
+        hsmap = _read_map(acc, "night", 0, "beta")
         vals = hsmap.get_values_pix(hpx)
         np.testing.assert_allclose(vals["exptime_s"][0], sum(exptimes))
 
@@ -720,8 +720,8 @@ class TestCadenceAccumulator:
         for r in perm:
             acc_permuted.ingest(r, dfs[r])
 
-        canonical_map = _read_map(acc_canonical, "night", 0, "g")
-        permuted_map = _read_map(acc_permuted, "night", 0, "g")
+        canonical_map = _read_map(acc_canonical, "night", 0, "beta")
+        permuted_map = _read_map(acc_permuted, "night", 0, "beta")
 
         np.testing.assert_array_equal(canonical_map.valid_pixels, permuted_map.valid_pixels)
         c_vals = canonical_map.get_values_pix(canonical_map.valid_pixels)
@@ -774,11 +774,11 @@ class TestCadenceAccumulator:
             )
             df = _make_ratchet_df(hpx, np.full(len(hpx), noise), np.full(len(hpx), shot))
             acc_single.ingest(int(r), df)
-            ratchet_maps[int(r)] = _read_map(acc_single, "night", 0, "g")
+            ratchet_maps[int(r)] = _read_map(acc_single, "night", 0, "beta")
 
         for night_val in np.unique(nights):
             night_window_id = registry["night"][int(ratchet_nums[nights == night_val][0])]
-            night_hsmap = _read_map(acc_night, "night", night_window_id, "g")
+            night_hsmap = _read_map(acc_night, "night", night_window_id, "beta")
             night_vals = night_hsmap.get_values_pix(hpx)
 
             sum_inv = np.zeros(len(hpx), dtype=np.float64)
@@ -810,8 +810,8 @@ class TestCadenceAccumulator:
         for r in range(n_epochs):
             acc_single.ingest(r, df)
 
-        map_multi = _read_map(acc_multi, "night", 0, "g")
-        map_single = _read_map(acc_single, "night", 0, "g")
+        map_multi = _read_map(acc_multi, "night", 0, "beta")
+        map_single = _read_map(acc_single, "night", 0, "beta")
 
         np.testing.assert_array_equal(map_multi.valid_pixels, map_single.valid_pixels)
         v_multi = map_multi.get_values_pix(hpx)
@@ -838,8 +838,8 @@ class TestCadenceAccumulator:
         for r in range(n_epochs):
             acc_seq.ingest(r, df)
 
-        map_bulk = _read_map(acc_bulk, "night", 0, "g")
-        map_seq = _read_map(acc_seq, "night", 0, "g")
+        map_bulk = _read_map(acc_bulk, "night", 0, "beta")
+        map_seq = _read_map(acc_seq, "night", 0, "beta")
         v_bulk = map_bulk.get_values_pix(hpx)
         v_seq = map_seq.get_values_pix(hpx)
 
@@ -1106,14 +1106,14 @@ class TestBandQeUnits:
 
         from argus_sim import ABPhot, SystemThroughput, c
 
-        tp = SystemThroughput(throughput_loss=1.0, filters={"g": True})
+        tp = SystemThroughput(throughput_loss=1.0, filters={"beta": True})
         area = (np.pi * (c.telescope.aperture_diameter / 2 * u.mm) ** 2).to(u.cm**2)
         ab = ABPhot(collecting_area=area, throughput_loss=1.0, throughput=tp)
-        qe_quantity = np.average(tp.qe_freq, weights=tp.filt_freq["g"])
+        qe_quantity = np.average(tp.qe_freq, weights=tp.filt_freq["beta"])
         assert isinstance(qe_quantity, u.Quantity)
 
         depth_map = _make_depth_map([10, 20], [1e-4, 4e-4], 60.0)
-        with_quantity = limmag_from_map(depth_map, 5.0, ab, "g", qe_quantity)
-        with_float = limmag_from_map(depth_map, 5.0, ab, "g", float(qe_quantity.value))
+        with_quantity = limmag_from_map(depth_map, 5.0, ab, "beta", qe_quantity)
+        with_float = limmag_from_map(depth_map, 5.0, ab, "beta", float(qe_quantity.value))
         np.testing.assert_allclose(with_quantity["limmag"], with_float["limmag"])
         assert np.all(np.isfinite(with_quantity["limmag"]))

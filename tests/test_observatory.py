@@ -25,16 +25,16 @@ def ab(throughput):
     return ABPhot(collecting_area=collecting_area, throughput_loss=1.0, throughput=throughput)
 
 
-def test_sky_brightness_g_brighter_than_v(obs):
-    """Under a moonlit sky (scattered sunlight, blue) the g sky is brighter than V."""
+def test_sky_brightness_beta_brighter_than_v(obs):
+    """Under a moonlit sky (scattered sunlight, blue) the beta sky is brighter than V."""
     t = atime.Time("2022-01-14T06:00:00", scale="utc")  # Moon at 64 deg altitude, 88% illuminated
     v_mag, *_ = obs.sky_brightness_at(90, 90, t, band="V")
-    g_mag, *_ = obs.sky_brightness_at(90, 90, t, band="g")
+    beta_mag, *_ = obs.sky_brightness_at(90, 90, t, band="beta")
 
-    assert g_mag < v_mag
+    assert beta_mag < v_mag
 
 
-@pytest.mark.parametrize("band", ["g", "r", "i"])
+@pytest.mark.parametrize("band", ["beta", "rho"])
 def test_sky_brightness_consistent_with_spectral_sky(obs, throughput, ab, band):
     """sky_brightness_at band corrections should match SpectralSky component-weighted colors."""
     t = atime.Time("2025-01-15T03:00:00", scale="utc")

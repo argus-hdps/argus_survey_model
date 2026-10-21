@@ -342,16 +342,16 @@ class TestForwardMC:
             SampleResult(
                 sample_id=0,
                 theta={"telescope.readnoise": 1.3, "observatory.seeing_mean": 0.9},
-                ratchet_depths={"g": [20.5, 20.3, 20.7]},
-                median_depth={"g": 20.5},
-                depth_10pct={"g": 19.8},
-                depth_90pct={"g": 21.0},
+                ratchet_depths={"beta": [20.5, 20.3, 20.7]},
+                median_depth={"beta": 20.5},
+                depth_10pct={"beta": 19.8},
+                depth_90pct={"beta": 21.0},
             ),
         ]
         df = mc.to_dataframe()
         assert len(df) == 1
         assert "theta_telescope.readnoise" in df.columns
-        assert "median_depth_g" in df.columns
+        assert "median_depth_beta" in df.columns
 
     def test_default_priors_count(self):
         assert len(DEFAULT_SAMPLE_PRIORS) == 4
@@ -523,13 +523,13 @@ class TestBandOrderDeterminism:
         tp = SystemThroughput(throughput_loss=1.0)
         area = (np.pi * (c.telescope.aperture_diameter / 2 * u.mm) ** 2).to(u.cm**2)
         ab = ABPhot(collecting_area=area, throughput_loss=1.0, throughput=tp)
-        for options in (["g", "r+i", "g", "r+i"], ["r+i", "g", "r+i", "g"]):
+        for options in (["beta", "rho", "beta", "rho"], ["rho", "beta", "rho", "beta"]):
             keys = list(build_band_params(sorted(set(options)), tp, ab).keys())
             assert keys == sorted(keys)
 
     def test_same_seed_same_depths_across_option_order(self, tmp_path):
         out = []
-        for options in (["g", "r+i", "g", "r+i"], ["r+i", "g", "r+i", "g"]):
+        for options in (["beta", "rho", "beta", "rho"], ["rho", "beta", "rho", "beta"]):
             cfg = Config(sim_version="test")
             cfg.telescope.psf_model = "gaussian"  # deterministic PSF; the delivered default draws pixel phases
             cfg.filter_strategy.options = options
@@ -547,18 +547,18 @@ class TestBandShares:
         self.band_shares = band_shares
 
     def test_one_to_one(self):
-        assert self.band_shares(["g", "rho", "g", "rho"]) == {"g": 0.5, "rho": 0.5}
+        assert self.band_shares(["beta", "rho", "beta", "rho"]) == {"beta": 0.5, "rho": 0.5}
 
     def test_two_to_one(self):
-        shares = self.band_shares(["g", "g", "rho"])
-        assert shares["g"] == pytest.approx(2 / 3)
+        shares = self.band_shares(["beta", "beta", "rho"])
+        assert shares["beta"] == pytest.approx(2 / 3)
         assert shares["rho"] == pytest.approx(1 / 3)
 
     def test_single_band(self):
-        assert self.band_shares(["g"]) == {"g": 1.0}
+        assert self.band_shares(["beta"]) == {"beta": 1.0}
 
     def test_shares_sum_to_one(self):
-        assert sum(self.band_shares(["g", "r+i", "i", "g"]).values()) == pytest.approx(1.0)
+        assert sum(self.band_shares(["beta", "rho", "rho", "beta", "rho"]).values()) == pytest.approx(1.0)
 
     def test_monotonically_increasing(self):
         """With 1s exposures all windows are strictly increasing."""
@@ -594,7 +594,7 @@ class TestCadenceDepths:
         than a single-band strategy; single exposures are untouched.
         """
         depths = {}
-        for label, options in (("single", ["g"]), ("alternating", ["g", "rho", "g", "rho"])):
+        for label, options in (("single", ["beta"]), ("alternating", ["beta", "rho", "beta", "rho"])):
             cfg = Config(sim_version="test")
             cfg.telescope.psf_model = "gaussian"  # deterministic PSF; the delivered default draws pixel phases
             cfg.filter_strategy.options = options
@@ -607,9 +607,9 @@ class TestCadenceDepths:
             )
             depths[label] = mc.run(n_samples=1, seed=3)[0].cadence_depths
         expected = 1.25 * np.log10(2.0)
-        assert depths["alternating"]["1sec"]["g"] == pytest.approx(depths["single"]["1sec"]["g"], abs=1e-6)
+        assert depths["alternating"]["1sec"]["beta"] == pytest.approx(depths["single"]["1sec"]["beta"], abs=1e-6)
         for window in ("1night", "1week"):
-            loss = depths["single"][window]["g"] - depths["alternating"][window]["g"]
+            loss = depths["single"][window]["beta"] - depths["alternating"][window]["beta"]
             assert loss == pytest.approx(expected, abs=0.03), f"{window}: {loss:.3f} vs {expected:.3f}"
 
     @pytest.mark.parametrize("seed", [7, 42, 123, 456, 999])
@@ -971,13 +971,13 @@ class TestSensitivityTable:
                 "theta_telescope.readnoise": readnoise,
                 "theta_observatory.seeing_mean": seeing,
                 "theta_observatory.solar_activity": solar,
-                "median_depth_g": depth,
+                "median_depth_beta": depth,
             }
         )
 
     def test_returns_dataframe_with_expected_columns(self):
         df = self._make_mock_df()
-        result = compute_sensitivity(df, depth_col="median_depth_g")
+        result = compute_sensitivity(df, depth_col="median_depth_beta")
         assert "parameter" in result.columns
         assert "spearman_rho" in result.columns
         assert "p_value" in result.columns
@@ -1021,7 +1021,7 @@ class TestSensitivityTable:
     def test_raises_on_missing_theta(self):
         import pandas as pd
 
-        df = pd.DataFrame({"x": [1, 2, 3], "median_depth_g": [20, 21, 22]})
+        df = pd.DataFrame({"x": [1, 2, 3], "median_depth_beta": [20, 21, 22]})
         with pytest.raises(ValueError, match="No theta"):
             compute_sensitivity(df)
 
@@ -1090,7 +1090,7 @@ class TestPlotSensitivity:
                 "theta_telescope.readnoise": readnoise,
                 "theta_observatory.seeing_mean": seeing,
                 "theta_observatory.solar_activity": solar,
-                "median_depth_g": depth,
+                "median_depth_beta": depth,
             }
         )
 
@@ -1160,8 +1160,8 @@ class TestBlockDuty:
     carry the exact cycle share in the phase mean with f_on = 1.
     """
 
-    ONE_ONE = ["g", "rho", "g", "rho"]
-    TWO_ONE = ["g", "g", "rho"]
+    ONE_ONE = ["beta", "rho", "beta", "rho"]
+    TWO_ONE = ["beta", "beta", "rho"]
 
     def test_window_within_one_block_is_undivided(self):
         """T <= 15 min: every exposure is in the on-duty band; f_on is the cycle share."""
@@ -1169,11 +1169,11 @@ class TestBlockDuty:
 
         for n_all in (1.0, 5.0, 15.0):
             d = block_duty(self.ONE_ONE, n_all, 60.0)
-            for band in ("g", "rho"):
+            for band in ("beta", "rho"):
                 assert d[band]["f_on"] == pytest.approx(0.5)
                 assert d[band]["n_on_min"] == d[band]["n_on_mean"] == d[band]["n_on_max"] == pytest.approx(n_all)
         d = block_duty(self.TWO_ONE, 15.0, 60.0)
-        assert d["g"]["f_on"] == pytest.approx(2 / 3) and d["g"]["n_on_mean"] == pytest.approx(15.0)
+        assert d["beta"]["f_on"] == pytest.approx(2 / 3) and d["beta"]["n_on_mean"] == pytest.approx(15.0)
         assert d["rho"]["f_on"] == pytest.approx(1 / 3) and d["rho"]["n_on_mean"] == pytest.approx(15.0)
 
     def test_thirty_minutes(self):
@@ -1181,12 +1181,14 @@ class TestBlockDuty:
         from argus_sim.forward_mc import block_duty
 
         d = block_duty(self.ONE_ONE, 30.0, 60.0)
-        for band in ("g", "rho"):
+        for band in ("beta", "rho"):
             assert d[band]["f_on"] == 1.0
             assert d[band]["n_on_min"] == d[band]["n_on_mean"] == d[band]["n_on_max"] == pytest.approx(15.0)
         d = block_duty(self.TWO_ONE, 30.0, 60.0)
-        assert d["g"]["f_on"] == 1.0
-        assert (d["g"]["n_on_min"], d["g"]["n_on_mean"], d["g"]["n_on_max"]) == pytest.approx((15.0, 20.0, 30.0))
+        assert d["beta"]["f_on"] == 1.0
+        assert (d["beta"]["n_on_min"], d["beta"]["n_on_mean"], d["beta"]["n_on_max"]) == pytest.approx(
+            (15.0, 20.0, 30.0)
+        )
         assert d["rho"]["f_on"] == pytest.approx(2 / 3)
         assert (d["rho"]["n_on_min"], d["rho"]["n_on_mean"], d["rho"]["n_on_max"]) == pytest.approx((15.0, 15.0, 15.0))
 
@@ -1195,8 +1197,10 @@ class TestBlockDuty:
         from argus_sim.forward_mc import block_duty
 
         d = block_duty(self.TWO_ONE, 60.0, 60.0)
-        assert d["g"]["f_on"] == 1.0 and d["rho"]["f_on"] == 1.0
-        assert (d["g"]["n_on_min"], d["g"]["n_on_mean"], d["g"]["n_on_max"]) == pytest.approx((30.0, 40.0, 45.0))
+        assert d["beta"]["f_on"] == 1.0 and d["rho"]["f_on"] == 1.0
+        assert (d["beta"]["n_on_min"], d["beta"]["n_on_mean"], d["beta"]["n_on_max"]) == pytest.approx(
+            (30.0, 40.0, 45.0)
+        )
         assert (d["rho"]["n_on_min"], d["rho"]["n_on_mean"], d["rho"]["n_on_max"]) == pytest.approx((15.0, 20.0, 30.0))
 
     @pytest.mark.parametrize("n_all", [60.0, 510.0, 660.0, 2345.7, 1e5 + 0.3])
@@ -1218,29 +1222,31 @@ class TestBlockDuty:
         from argus_sim.forward_mc import block_duty
 
         d = block_duty(self.ONE_ONE, 60.0, 1.0)
-        assert d["g"]["f_on"] == 0.5 and d["g"]["n_on_mean"] == pytest.approx(60.0)
+        assert d["beta"]["f_on"] == 0.5 and d["beta"]["n_on_mean"] == pytest.approx(60.0)
         d = block_duty(self.ONE_ONE, 3600.0, 1.0)
-        assert d["g"]["f_on"] == 1.0 and d["g"]["n_on_mean"] == pytest.approx(1800.0)
+        assert d["beta"]["f_on"] == 1.0 and d["beta"]["n_on_mean"] == pytest.approx(1800.0)
 
     def test_spec_uses_block_model(self):
         """_cadence_n_eff_spec: block gives the phase counts; single band gives a float."""
         from argus_sim.forward_mc import _cadence_n_eff_spec
 
-        spec = _cadence_n_eff_spec("15min", "winter", 1.0, 60.0, 0.5, "g", "block", self.ONE_ONE)
+        spec = _cadence_n_eff_spec("15min", "winter", 1.0, 60.0, 0.5, "beta", "block", self.ONE_ONE)
         assert spec["share_mean"] == pytest.approx(7.5)
         assert spec["on_duty_p50"] == pytest.approx(15.0) and spec["f_on"] == 0.5
-        spec = _cadence_n_eff_spec("1night", "winter", 1.0, 60.0, 0.5, "g", "block", self.ONE_ONE)
+        spec = _cadence_n_eff_spec("1night", "winter", 1.0, 60.0, 0.5, "beta", "block", self.ONE_ONE)
         assert spec["on_duty_p50"] == pytest.approx(spec["share_mean"]) and spec["f_on"] == 1.0
-        assert _cadence_n_eff_spec("1night", "winter", 1.0, 60.0, 1.0, "g", "block", ["g"]) == pytest.approx(660.0)
+        assert _cadence_n_eff_spec("1night", "winter", 1.0, 60.0, 1.0, "beta", "block", ["beta"]) == pytest.approx(
+            660.0
+        )
         with pytest.raises(ValueError):
-            _cadence_n_eff_spec("15min", "winter", 1.0, 60.0, 0.5, "g", "cells", self.ONE_ONE)
+            _cadence_n_eff_spec("15min", "winter", 1.0, 60.0, 0.5, "beta", "cells", self.ONE_ONE)
 
     def test_forward_mc_block_depths(self, tmp_path):
         """End to end: on-duty 15-min depth is +1.25 log10(2) over the share mean; a night matches it; provenance says block."""
         import json
 
         cfg = Config(sim_version="test")
-        cfg.filter_strategy.options = ["g", "rho", "g", "rho"]
+        cfg.filter_strategy.options = ["beta", "rho", "beta", "rho"]
         mc = ForwardMC(
             cfg,
             sample_priors=[],
@@ -1250,7 +1256,7 @@ class TestBlockDuty:
         )
         r = mc.run(n_samples=1, seed=3)[0]
         assert set(r.cadence_depths_on_duty) == {"1sec", "15min", "30min", "1night"}
-        for b in ("g", "rho"):
+        for b in ("beta", "rho"):
             on = r.cadence_depths_on_duty
             assert on["1sec"][b]["p50"] == pytest.approx(r.cadence_depths["1sec"][b]) and on["1sec"][b]["f_on"] == 0.5
             assert on["15min"][b]["p50"] - r.cadence_depths["15min"][b] == pytest.approx(1.25 * np.log10(2.0), abs=0.03)
@@ -1260,6 +1266,6 @@ class TestBlockDuty:
             assert on["1night"][b]["p50"] == pytest.approx(r.cadence_depths["1night"][b], abs=1e-6)
             assert on["1night"][b]["p16"] <= on["1night"][b]["p50"] <= on["1night"][b]["p84"]
         prov = json.load(open(tmp_path / "provenance.json"))
-        assert prov["duty_model"] == "block" and prov["filter_cycle"] == ["g", "rho", "g", "rho"]
+        assert prov["duty_model"] == "block" and prov["filter_cycle"] == ["beta", "rho", "beta", "rho"]
         with pytest.raises(ValueError):
             ForwardMC(cfg, sample_priors=[], output_dir=str(tmp_path), duty_model="cells")

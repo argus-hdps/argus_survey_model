@@ -9,7 +9,7 @@ import pytest
 from argus_sim.ring_layout import LAYOUTS, load_ring_layout, subarray_members
 
 A170R_SHA256 = "0d2b3154541c5f083e57e8183756696cb234ff8e3e8e660bcf8eb4c045b8c9d1"
-BANDS_SHA256 = "51f8b087a78b1f69244a4ebfd334aeb50462eafc21dc6a9959f7755460d4da4c"
+BANDS_SHA256 = "1a380a9bf8bcb48309572cb43a1063208562e1dd8e5fd841200e37f0daa431ba"
 
 
 @pytest.fixture(scope="module")

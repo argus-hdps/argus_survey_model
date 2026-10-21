@@ -43,7 +43,7 @@ import numpy as np
 from argus_sim.lightcurve import SurveyRun, bin_lightcurve
 
 run = SurveyRun("s3://some-public-bucket/argus/sim/argsim_5yr_beta_rho_uniform_v5.4/")
-vis = run.visits(150.0, 2.2, band="g") # every 60-s slot and telescope that covered the position RA, Dec in decimal deg
+vis = run.visits(150.0, 2.2, band="beta") # every 60-s slot and telescope that covered the position RA, Dec in decimal deg
 print(len(vis), "visits")
 
 

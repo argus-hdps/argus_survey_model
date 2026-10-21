@@ -578,8 +578,8 @@ def block_duty(
 
     The filter cycle is taken as exchanged pointings:
     every sky position sees ``block_minutes`` in each entry of ``options`` in
-    turn, with no camera overlap: ``["g", "rho", "g", "rho"]`` is one
-    15-exposure block of beta, one of rho, repeating; ``["g", "g", "rho"]``
+    turn, with no camera overlap: ``["beta", "rho", "beta", "rho"]`` is one
+    15-exposure block of beta, one of rho, repeating; ``["beta", "beta", "rho"]``
     is two blocks of beta then one of rho.  A block is the 15 exposures of
     one 16-minute pointing.
     A cadence window starts on a block boundary, and its starting block is
@@ -622,7 +622,7 @@ def block_duty(
 def band_shares(options: list[str]) -> dict[str, float]:
     """Fraction of the filter-strategy cycle each band occupies.
 
-    ``["g", "rho", "g", "rho"]`` gives 0.5 each; ``["g", "g", "rho"]`` gives
+    ``["beta", "rho", "beta", "rho"]`` gives 0.5 each; ``["beta", "beta", "rho"]`` gives
     2/3 and 1/3.  This is the long-run share of exposures a sky position
     receives in each band as it drifts across the alternating filter strips.
     """

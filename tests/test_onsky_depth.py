@@ -56,8 +56,8 @@ class TestAccumulateOnsky:
         trans = atmospheric_transmission(np.full(3, alt), atm_tp_am1)
         out = accumulate_onsky([7, 7, 7], [10.0, 11.0, 9.0], [1.0, 2.0, 0.5], trans, n_epochs, 60.0)
         ab = _stub_ab()
-        m_above = limmag_from_inv_sum(out["inv_above"], out["n_obs"], out["exptime_s"], 5.0, ab, "g", 0.8)
-        m_onsky = limmag_from_inv_sum(out["inv_onsky"], out["n_obs"], out["exptime_s"], 5.0, ab, "g", 0.8)
+        m_above = limmag_from_inv_sum(out["inv_above"], out["n_obs"], out["exptime_s"], 5.0, ab, "beta", 0.8)
+        m_onsky = limmag_from_inv_sum(out["inv_onsky"], out["n_obs"], out["exptime_s"], 5.0, ab, "beta", 0.8)
         expected = -2.5 * np.log10(float(trans[0]))
         assert expected == pytest.approx(extinction_coefficient(atm_tp_am1) * float(pickering(alt)), rel=1e-9)
         np.testing.assert_allclose(m_above - m_onsky, expected, rtol=1e-9)
@@ -73,7 +73,7 @@ class TestAccumulateOnsky:
         acc = CadenceAccumulator(registry, ["night"], 128, str(tmp_path), mjds={0: 60000.1})
         acc.ingest(
             0,
-            {"healpix": hpx, "noise": noise, "source_shot": shot, "exptime_s": 60.0, "band": np.array(["g"] * 4)},
+            {"healpix": hpx, "noise": noise, "source_shot": shot, "exptime_s": 60.0, "band": np.array(["beta"] * 4)},
             n_epochs=3,
         )
         manifest = acc.finalize()
@@ -125,7 +125,7 @@ class TestFullSystem:
                 "noise": noise,
                 "source_shot": shot,
                 "exptime_s": 60.0,
-                "band": np.array(["g", "g"]),
+                "band": np.array(["beta", "beta"]),
                 "signal_tp": tp,
             },
             n_epochs=14,

@@ -95,38 +95,38 @@ class TestVBandConsistency:
 class TestColorDirection:
     """Spectral color corrections should go in the physically expected direction."""
 
-    def test_g_band_moon_greater_than_airglow(self, throughput_all, ab):
-        """In g-band, scattered moonlight (Rayleigh-boosted blue) should
+    def test_beta_moon_greater_than_airglow(self, throughput_all, ab):
+        """In beta, scattered moonlight (Rayleigh-boosted blue) should
         produce more electrons per S_10 than the airglow component.
         """
-        sky_g = SpectralSky(throughput_all, ab, "g")
-        assert sky_g.e_per_s10_moon > sky_g.e_per_s10_airglow, (
-            f"g-band: moon ({sky_g.e_per_s10_moon:.4e}) should exceed airglow ({sky_g.e_per_s10_airglow:.4e})"
+        sky_b = SpectralSky(throughput_all, ab, "beta")
+        assert sky_b.e_per_s10_moon > sky_b.e_per_s10_airglow, (
+            f"beta: moon ({sky_b.e_per_s10_moon:.4e}) should exceed airglow ({sky_b.e_per_s10_airglow:.4e})"
         )
 
-    def test_i_band_moon_airglow_ratio_less_than_g(self, throughput_all, ab):
-        """In i-band, the moon/airglow ratio should be smaller than in g-band
+    def test_rho_moon_airglow_ratio_less_than_beta(self, throughput_all, ab):
+        """In rho, the moon/airglow ratio should be smaller than in beta
         (Rayleigh scattering blue-boosts moonlight, airglow is OH-dominated in red).
         """
-        sky_g = SpectralSky(throughput_all, ab, "g")
-        sky_i = SpectralSky(throughput_all, ab, "i")
-        ratio_g = sky_g.e_per_s10_moon / sky_g.e_per_s10_airglow
-        ratio_i = sky_i.e_per_s10_moon / sky_i.e_per_s10_airglow
-        assert ratio_g > ratio_i, f"g-band moon/airglow ratio ({ratio_g:.4f}) should exceed i-band ({ratio_i:.4f})"
+        sky_b = SpectralSky(throughput_all, ab, "beta")
+        sky_r = SpectralSky(throughput_all, ab, "rho")
+        ratio_b = sky_b.e_per_s10_moon / sky_b.e_per_s10_airglow
+        ratio_r = sky_r.e_per_s10_moon / sky_r.e_per_s10_airglow
+        assert ratio_b > ratio_r, f"beta moon/airglow ratio ({ratio_b:.4f}) should exceed rho ({ratio_r:.4f})"
 
 
 class TestPerComponentCoefficients:
     """Per-component spectral templates should produce physically distinct coefficients."""
 
-    def test_airglow_i_band_exceeds_zodiacal(self, throughput_all, ab):
-        """Airglow i-band coefficient should exceed zodiacal due to OH Meinel bands."""
-        sky_i = SpectralSky(throughput_all, ab, "i")
-        assert sky_i.e_per_s10_airglow > sky_i.e_per_s10_zodiacal, (
-            f"i-band: airglow ({sky_i.e_per_s10_airglow:.4e}) should exceed "
-            f"zodiacal ({sky_i.e_per_s10_zodiacal:.4e}) due to OH emission"
+    def test_airglow_rho_exceeds_zodiacal(self, throughput_all, ab):
+        """Airglow rho coefficient should exceed zodiacal due to OH Meinel bands."""
+        sky_r = SpectralSky(throughput_all, ab, "rho")
+        assert sky_r.e_per_s10_airglow > sky_r.e_per_s10_zodiacal, (
+            f"rho: airglow ({sky_r.e_per_s10_airglow:.4e}) should exceed "
+            f"zodiacal ({sky_r.e_per_s10_zodiacal:.4e}) due to OH emission"
         )
 
-    @pytest.mark.parametrize("band", ["g", "r", "i"])
+    @pytest.mark.parametrize("band", ["beta", "rho"])
     def test_per_component_coefficients_positive_and_finite(self, throughput_all, ab, band):
         sky = SpectralSky(throughput_all, ab, band)
         for name in ("e_per_s10_airglow", "e_per_s10_zodiacal", "e_per_s10_starlight"):
@@ -134,7 +134,7 @@ class TestPerComponentCoefficients:
             assert np.isfinite(val), f"{band} {name} is not finite: {val}"
             assert val > 0, f"{band} {name} is not positive: {val}"
 
-    @pytest.mark.parametrize("band", ["g", "r", "i"])
+    @pytest.mark.parametrize("band", ["beta", "rho"])
     def test_components_are_spectrally_distinct(self, throughput_all, ab, band):
         """The three dark-sky components should not all have the same coefficient."""
         sky = SpectralSky(throughput_all, ab, band)
@@ -145,7 +145,7 @@ class TestPerComponentCoefficients:
 class TestCoefficientSanity:
     """Basic sanity checks on precomputed coefficients."""
 
-    @pytest.mark.parametrize("band", ["g", "r", "i"])
+    @pytest.mark.parametrize("band", ["beta", "rho"])
     def test_coefficients_positive_and_finite(self, throughput_all, ab, band):
         sky = SpectralSky(throughput_all, ab, band)
         for name in (
@@ -162,12 +162,10 @@ class TestCoefficientSanity:
     @pytest.mark.parametrize(
         "band,s10",
         [
-            ("g", 50),
-            ("g", 200),
-            ("r", 100),
-            ("r", 500),
-            ("i", 150),
-            ("i", 1000),
+            ("beta", 50),
+            ("beta", 200),
+            ("rho", 100),
+            ("rho", 1000),
         ],
     )
     def test_sky_electrons_linearity(self, throughput_all, ab, band, s10):
@@ -180,12 +178,11 @@ class TestCoefficientSanity:
     @pytest.mark.parametrize(
         "band,airglow,zodiacal,starlight,moon,artif",
         [
-            ("g", 50, 30, 20, 50, 10),
-            ("g", 200, 60, 40, 0, 0),
-            ("r", 40, 20, 20, 200, 5),
-            ("r", 0, 0, 0, 150, 30),
-            ("i", 120, 80, 50, 100, 20),
-            ("i", 0, 0, 0, 0, 500),
+            ("beta", 50, 30, 20, 50, 10),
+            ("beta", 200, 60, 40, 0, 0),
+            ("rho", 40, 20, 20, 200, 5),
+            ("rho", 120, 80, 50, 100, 20),
+            ("rho", 0, 0, 0, 0, 500),
         ],
     )
     def test_sky_electrons_additivity(self, throughput_all, ab, band, airglow, zodiacal, starlight, moon, artif):
@@ -216,11 +213,10 @@ class TestSkyBrightnessConsistency:
         assert np.allclose(v_mag, comp["v_mag"])
 
     def test_sky_brightness_band_correction(self, obs, bright_time):
-        """sky_brightness_at in g-band should differ from V-band by the band color."""
+        """sky_brightness_at in beta should differ from V-band by the band color."""
         v_mag, *_ = obs.sky_brightness_at(45.0, 90.0, bright_time, band="V")
-        g_mag, *_ = obs.sky_brightness_at(45.0, 90.0, bright_time, band="g")
-        # g should be brighter (lower mag number) than V for typical sky
-        assert not np.allclose(v_mag, g_mag), "g and V should differ"
+        beta_mag, *_ = obs.sky_brightness_at(45.0, 90.0, bright_time, band="beta")
+        assert not np.allclose(v_mag, beta_mag), "beta and V should differ"
 
 
 class TestComponentsRoundTrip:

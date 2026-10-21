@@ -45,7 +45,7 @@ def test_gaussian_psf_drifted_psf():
 def test_gaussian_psf_accepts_band_and_rng_kwargs():
     """GaussianPSF.with_seeing accepts and ignores band/rng kwargs."""
     psf_gen = GaussianPSF()
-    psf, fwhm = psf_gen.with_seeing(seeing=1.0, band="g", rng=np.random.default_rng(0))
+    psf, fwhm = psf_gen.with_seeing(seeing=1.0, band="beta", rng=np.random.default_rng(0))
     assert psf.shape == (28, 28)
     assert np.isclose(psf.sum(), 1.0)
 
@@ -115,7 +115,7 @@ class TestDeliveredPSF:
     def test_smoke(self, delivered):
         """Basic call returns correct shape and normalization."""
         rng = np.random.default_rng(42)
-        psf, fwhm = delivered.with_seeing(1.0, band="g", rng=rng)
+        psf, fwhm = delivered.with_seeing(1.0, band="beta", rng=rng)
         assert psf.shape == (28, 28)
         assert np.isclose(psf.sum(), 1.0, atol=1e-10)
         assert fwhm > 0
@@ -123,16 +123,23 @@ class TestDeliveredPSF:
     def test_normalization_all_bands(self, delivered):
         """PSF sums to 1.0 for every supported band."""
         rng = np.random.default_rng(99)
-        for band in ["g", "rho", "r", "i", "r+i", "A"]:
+        for band in ["beta", "rho"]:
             psf, _ = delivered.with_seeing(1.0, band=band, rng=rng)
             assert np.isclose(psf.sum(), 1.0, atol=1e-10), f"Band {band}: sum={psf.sum()}"
 
-    def test_red_bands_share_the_rho_psf(self, delivered):
-        """r, i, r+i and A use the rho PSF."""
-        ref, _ = delivered.with_seeing(1.0, band="rho", field_angle_deg=1.0, pixel_phase=(0, 0))
-        for band in ["r", "i", "r+i", "A"]:
-            psf, _ = delivered.with_seeing(1.0, band=band, field_angle_deg=1.0, pixel_phase=(0, 0))
-            np.testing.assert_array_equal(psf, ref)
+    def test_unknown_band_raises(self, delivered):
+        """Only the survey bands have a PSF; any other name (including the old "g") is an error."""
+        for band in ["g", "r", "A"]:
+            with pytest.raises(ValueError, match="not in the PSF file"):
+                delivered.with_seeing(1.0, band=band, field_angle_deg=1.0, pixel_phase=(0, 0))
+
+    def test_unknown_ee50_band_raises(self):
+        """An EE50 profile naming a band the PSF file lacks fails at load instead of being ignored."""
+        prof = {"g": (np.array([0.0, 2.0]), np.array([10.0, 12.0]))}
+        with pytest.raises(ValueError, match="EE50 profile bands"):
+            DeliveredPSF(
+                fits_path=DEFAULT_PSF_FITS, plate_scale=1.007, pixel_size=3.76, stamp_size=28, ee50_profile=prof
+            )
 
     def test_pixel_phase_shifts_centroid(self):
         """Pixel phase randomization shifts centroid by less than 1 pixel."""
@@ -146,7 +153,7 @@ class TestDeliveredPSF:
         centroids = []
         for seed in range(20):
             rng = np.random.default_rng(seed)
-            psf, _ = delivered_phase.with_seeing(1.0, band="g", rng=rng)
+            psf, _ = delivered_phase.with_seeing(1.0, band="beta", rng=rng)
             yy, xx = np.mgrid[: psf.shape[0], : psf.shape[1]]
             cy = np.average(yy, weights=psf)
             cx = np.average(xx, weights=psf)
@@ -166,8 +173,8 @@ class TestDeliveredPSF:
         """More seeing produces a broader PSF."""
         rng1 = np.random.default_rng(0)
         rng2 = np.random.default_rng(0)
-        _, fwhm_good = delivered.with_seeing(0.5, band="g", rng=rng1)
-        _, fwhm_bad = delivered.with_seeing(2.0, band="g", rng=rng2)
+        _, fwhm_good = delivered.with_seeing(0.5, band="beta", rng=rng1)
+        _, fwhm_bad = delivered.with_seeing(2.0, band="beta", rng=rng2)
         assert fwhm_bad > fwhm_good
 
     def test_file_layout(self):
@@ -186,7 +193,7 @@ def test_stamp_flux_capture_good_seeing():
     """In good seeing the 28x28 stamp captures >99% of the binned PSF flux at every tabulated field angle."""
     delivered = DeliveredPSF(fits_path=DEFAULT_PSF_FITS, plate_scale=1.007, pixel_size=3.76, stamp_size=28)
     wide = DeliveredPSF(fits_path=DEFAULT_PSF_FITS, plate_scale=1.007, pixel_size=3.76, stamp_size=29)
-    for band in ("g", "rho"):
+    for band in ("beta", "rho"):
         for angle in delivered.field_angles(band):
             # the 29-pixel stamp is the whole binned array
             stamp, _ = delivered.with_seeing(0.5, band=band, field_angle_deg=float(angle), pixel_phase=(0, 0))

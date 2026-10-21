@@ -75,7 +75,7 @@ def test_write_parquet_with_metadata_round_trip(tmp_path):
 
     from argus_sim.survey import write_parquet_with_metadata
 
-    df = pd.DataFrame({"healpix": [1, 2], "band": ["g", "rho"], "limmag": [20.1, 19.7]})
+    df = pd.DataFrame({"healpix": [1, 2], "band": ["beta", "rho"], "limmag": [20.1, 19.7]})
     path = tmp_path / "ratchet.parquet"
     write_parquet_with_metadata(df, str(path), {"epoch_start_mjd": "61772.07", "n_epochs": 15})
     table = pq.read_table(path)

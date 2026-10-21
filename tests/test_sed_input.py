@@ -13,12 +13,12 @@ from argus_sim.spectral_sky import build_band_params, signal_throughput
 @pytest.fixture(scope="module")
 def setup_photometry():
     """Share the Argus throughput grid and collecting area across SED tests."""
-    tp = SystemThroughput(throughput_loss=1.0, filters={"g": True, "rho": True})
+    tp = SystemThroughput(throughput_loss=1.0, filters={"beta": True, "rho": True})
     ab = ABPhot(throughput=tp, collecting_area=c.telescope.collecting_area)
     return tp, ab
 
 
-@pytest.mark.parametrize("band", ["g", "rho"])
+@pytest.mark.parametrize("band", ["beta", "rho"])
 def test_flat_fnu_sed_matches_existing_flux_density_path(setup_photometry, band):
     """A flat F_nu SED must reproduce photons_from_flux_density."""
     tp, ab = setup_photometry
@@ -31,7 +31,7 @@ def test_flat_fnu_sed_matches_existing_flux_density_path(setup_photometry, band)
     np.testing.assert_allclose(got.to_value(u.photon / u.second), expected.to_value(u.photon / u.second), rtol=2e-4)
 
 
-@pytest.mark.parametrize("band", ["g", "rho"])
+@pytest.mark.parametrize("band", ["beta", "rho"])
 def test_flambda_and_fnu_inputs_are_equivalent(setup_photometry, band):
     """Equivalent F_lambda and F_nu representations must give the same result."""
     tp, ab = setup_photometry
@@ -49,7 +49,7 @@ def test_flambda_and_fnu_inputs_are_equivalent(setup_photometry, band):
     )
 
 
-@pytest.mark.parametrize("band", ["g", "rho"])
+@pytest.mark.parametrize("band", ["beta", "rho"])
 @pytest.mark.parametrize("mag", [14.0, 22.0])
 def test_sed_recovers_known_ab_magnitude(setup_photometry, band, mag):
     """Both magnitude paths recover the flat-F_nu input AB magnitude."""
@@ -60,7 +60,7 @@ def test_sed_recovers_known_ab_magnitude(setup_photometry, band, mag):
     assert float(ab.mag_from_sed(band, tp.wav, fnu)) == pytest.approx(mag, abs=1e-6)
 
 
-@pytest.mark.parametrize("band", ["g", "rho"])
+@pytest.mark.parametrize("band", ["beta", "rho"])
 @pytest.mark.parametrize("airmass", [0.0, 1.0, 1.37, 2.0])
 def test_flat_fnu_full_system_matches_existing_ab_treatment(setup_photometry, band, airmass):
     """Direct SED integration must agree with the survey's exact AB-source throughput."""
@@ -80,8 +80,8 @@ def test_transparency_is_grey_multiplicative_factor(setup_photometry):
     """Grey transparency scales the detected electron rate linearly."""
     tp, ab = setup_photometry
     fnu = np.full(tp.wav.size, 2.0e-27) * u.erg / (u.second * u.cm**2 * u.Hz)
-    clear = ab.electrons_from_sed("g", tp.wav, fnu, airmass=1.2, transparency=1.0)
-    grey = ab.electrons_from_sed("g", tp.wav, fnu, airmass=1.2, transparency=0.73)
+    clear = ab.electrons_from_sed("beta", tp.wav, fnu, airmass=1.2, transparency=1.0)
+    grey = ab.electrons_from_sed("beta", tp.wav, fnu, airmass=1.2, transparency=0.73)
     np.testing.assert_allclose(grey.value, 0.73 * clear.value, rtol=1e-12)
 
 
@@ -92,13 +92,13 @@ def test_partial_band_coverage_is_rejected_by_default(setup_photometry):
     flux = np.ones(wav.size) * 1e-15 * u.erg / (u.second * u.cm**2 * u.nm)
 
     with pytest.raises(ValueError, match="does not cover the full"):
-        ab.photons_from_sed("g", wav, flux)
+        ab.photons_from_sed("beta", wav, flux)
 
-    rate = ab.photons_from_sed("g", wav, flux, allow_partial=True)
+    rate = ab.photons_from_sed("beta", wav, flux, allow_partial=True)
     assert rate > 0 * u.photon / u.second
 
 
-@pytest.mark.parametrize("band", ["g", "rho"])
+@pytest.mark.parametrize("band", ["beta", "rho"])
 def test_sampled_sed_interpolation_and_partial_integration(setup_photometry, band):
     """Integrate a sloped SED on its overlap without extrapolating its flux."""
     tp, ab = setup_photometry
@@ -140,7 +140,7 @@ def test_invalid_sed_inputs(setup_photometry, wav, flux, error, match):
     """Invalid arrays and units fail before integration."""
     _, ab = setup_photometry
     with pytest.raises(error, match=match):
-        ab.photons_from_sed("g", wav, flux)
+        ab.photons_from_sed("beta", wav, flux)
 
 
 def test_disjoint_partial_sed_has_zero_rate(setup_photometry):
@@ -148,5 +148,5 @@ def test_disjoint_partial_sed_has_zero_rate(setup_photometry):
     _, ab = setup_photometry
     wav = np.array([1100, 1200]) * u.nm
     flux = np.ones(2) * u.Jy
-    assert ab.photons_from_sed("g", wav, flux, allow_partial=True).value == 0
-    assert ab.electrons_from_sed("g", wav, flux, allow_partial=True).value == 0
+    assert ab.photons_from_sed("beta", wav, flux, allow_partial=True).value == 0
+    assert ab.electrons_from_sed("beta", wav, flux, allow_partial=True).value == 0

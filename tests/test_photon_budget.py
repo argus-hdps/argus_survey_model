@@ -256,12 +256,12 @@ def _get_throughput_and_ab(band):
 @pytest.mark.parametrize(
     "band,sigma_pix,exptime_val",
     [
-        ("g", 1.5, 10),
-        ("g", 2.0, 30),
-        ("r", 1.0, 60),
-        ("r", 2.5, 120),
-        ("i", 1.5, 180),
-        ("i", 2.0, 300),
+        ("beta", 1.5, 10),
+        ("beta", 2.0, 30),
+        ("rho", 1.0, 60),
+        ("rho", 2.5, 120),
+        ("rho", 1.5, 180),
+        ("rho", 2.0, 300),
     ],
 )
 def test_exposure_scaling_depth_improvement(band, sigma_pix, exptime_val):
@@ -309,7 +309,7 @@ def test_exposure_scaling_depth_improvement(band, sigma_pix, exptime_val):
 
 
 @given(
-    band=sampled_from(["g", "r", "i"]),
+    band=sampled_from(["beta", "rho"]),
     sigma_pix=floats(0.8, 6.0),
     exptime_val=floats(1.0, 300.0),
     eskyflux_val=floats(1e3, 1e5),
@@ -365,12 +365,12 @@ def test_exposure_scaling_depth_improvement_hypothesis(band, sigma_pix, exptime_
 @pytest.mark.parametrize(
     "band,sigma_pix,area_cm2",
     [
-        ("g", 1.5, 1000),
-        ("g", 2.0, 5000),
-        ("r", 1.0, 2000),
-        ("r", 2.5, 10000),
-        ("i", 1.5, 8000),
-        ("i", 2.0, 20000),
+        ("beta", 1.5, 1000),
+        ("beta", 2.0, 5000),
+        ("rho", 1.0, 2000),
+        ("rho", 2.5, 10000),
+        ("rho", 1.5, 8000),
+        ("rho", 2.0, 20000),
     ],
 )
 def test_aperture_scaling_depth_improvement(band, sigma_pix, area_cm2):
@@ -421,7 +421,7 @@ def test_aperture_scaling_depth_improvement(band, sigma_pix, area_cm2):
 
 
 @given(
-    band=sampled_from(["g", "r", "i"]),
+    band=sampled_from(["beta", "rho"]),
     sigma_pix=floats(0.8, 6.0),
     area_cm2=floats(500.0, 50000.0),
     eskyflux_val=floats(1e3, 1e5),
@@ -478,13 +478,13 @@ def test_aperture_scaling_depth_improvement_hypothesis(band, sigma_pix, area_cm2
 @pytest.mark.parametrize(
     "band,airglow_s10,zodiacal_s10,starlight_s10,moon_s10,artif_s10,sigma_pix,exptime_val,snr_threshold",
     [
-        ("g", 50, 30, 20, 0, 0, 1.5, 30, 5.0),
-        ("g", 75, 45, 30, 50, 5, 2.0, 10, 5.0),
-        ("r", 50, 30, 20, 0, 0, 1.0, 30, 5.0),
-        ("r", 100, 60, 40, 100, 10, 3.0, 60, 5.0),
-        ("i", 50, 30, 20, 0, 0, 1.5, 30, 5.0),
-        ("i", 60, 36, 24, 30, 2, 2.5, 15, 5.0),
-        ("g", 40, 24, 16, 20, 1, 1.0, 1, 5.0),
+        ("beta", 50, 30, 20, 0, 0, 1.5, 30, 5.0),
+        ("beta", 75, 45, 30, 50, 5, 2.0, 10, 5.0),
+        ("rho", 50, 30, 20, 0, 0, 1.0, 30, 5.0),
+        ("rho", 100, 60, 40, 100, 10, 3.0, 60, 5.0),
+        ("rho", 50, 30, 20, 0, 0, 1.5, 30, 5.0),
+        ("rho", 60, 36, 24, 30, 2, 2.5, 15, 5.0),
+        ("beta", 40, 24, 16, 20, 1, 1.0, 1, 5.0),
     ],
 )
 def test_limiting_magnitude_self_consistency(

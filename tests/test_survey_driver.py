@@ -63,7 +63,7 @@ def test_configure_applies_and_records(tmp_path):
             "--seed",
             "1",
             "--cycle",
-            "g,g,rho",
+            "beta,beta,rho",
             "--coverage",
             "moc",
             "--nproc",
@@ -72,7 +72,7 @@ def test_configure_applies_and_records(tmp_path):
     )
     s = drv.configure(a, str(tmp_path))
     assert c.survey.start_date == dt.datetime(2026, 6, 14, 12) and c.survey.end_date == dt.datetime(2026, 6, 16, 12)
-    assert c.survey.coverage == "moc" and c.filter_strategy.options == ["g", "g", "rho"] and c.nproc == 2
+    assert c.survey.coverage == "moc" and c.filter_strategy.options == ["beta", "beta", "rho"] and c.nproc == 2
     assert c.output.output_dir == str(tmp_path)
     assert s["seed"] == 1 and s["ratchet_len"] == c.survey.ratchet_len and s["reset_min"] == c.survey.reset_min
 
@@ -90,7 +90,7 @@ def _manifest(nights=3):
             "moon_frac_max": 0.8 * k,
             "n_fast_ratchets": 3 * k,
         }
-        for band, depth in (("g", 24.0), ("rho", 23.0)):
+        for band, depth in (("beta", 24.0), ("rho", 23.0)):
             if k == 1 and band == "rho":
                 continue  # a night with no rho coverage is skipped for that band
             nt.update(
@@ -107,10 +107,10 @@ def _manifest(nights=3):
         rows.append(nt)
     return {
         "coverage": "exact",
-        "bands": ["g", "rho"],
+        "bands": ["beta", "rho"],
         "nights": rows,
         "band_zeropoints": {
-            "g": {"zp_photons_per_sec": 1e10, "band_qe": 0.8},
+            "beta": {"zp_photons_per_sec": 1e10, "band_qe": 0.8},
             "rho": {"zp_photons_per_sec": 2e10, "band_qe": 0.7},
         },
     }
@@ -119,10 +119,10 @@ def _manifest(nights=3):
 def test_night_table_has_every_night():
     rows = drv.night_table(_manifest(3))
     assert [(r["night"], r["band"]) for r in rows] == [
-        (61205, "g"),
+        (61205, "beta"),
         (61205, "rho"),
-        (61206, "g"),
-        (61207, "g"),
+        (61206, "beta"),
+        (61207, "beta"),
         (61207, "rho"),
     ]
     assert rows[2]["median_limmag"] == pytest.approx(24.01)
@@ -150,10 +150,25 @@ def test_span_summary_owned_minipixes(tmp_path):
     from argus_sim.tanseg_coverage import owned_mask
 
     own = owned_mask(tid)
-    assert out["g"]["n_minipix"] == int(own[0].sum()) and out["rho"]["n_minipix"] == int(own[1].sum())
+    assert out["beta"]["n_minipix"] == int(own[0].sum()) and out["rho"]["n_minipix"] == int(own[1].sum())
     rate = c.survey.detection_snr / np.sqrt(np.float32(1e-4)) / c.survey.base_cadence_s / 0.8
-    assert out["g"]["median_limmag"] == pytest.approx(-2.5 * np.log10(rate / 1e10), abs=1e-5)
-    assert out["g"]["median_n_obs"] == 100 and out["rho"]["median_n_obs"] == 50
+    assert out["beta"]["median_limmag"] == pytest.approx(-2.5 * np.log10(rate / 1e10), abs=1e-5)
+    assert out["beta"]["median_n_obs"] == 100 and out["rho"]["median_n_obs"] == 50
+
+
+def _legacy(manifest):
+    """Return the manifest as older versions wrote it, with beta named "g"."""
+    m = json.loads(json.dumps(manifest).replace('"beta', '"g'))
+    assert m["bands"] == ["g", "rho"] and "g_n_minipix" in m["nights"][0]
+    return m
+
+
+def test_legacy_g_band_reads_as_beta(tmp_path):
+    """Runs written before the rename call beta "g"; the summaries report it as beta."""
+    assert drv.night_table(_legacy(_manifest(3))) == drv.night_table(_manifest(3))
+    tid = sh.tiles(10.0, 10.6)["tanseg_id"][:2]
+    _write_totals(str(tmp_path), tid)
+    assert drv.span_summary(str(tmp_path), _legacy(_manifest())) == drv.span_summary(str(tmp_path), _manifest())
 
 
 def test_run_with_local_scratch_copies_and_summarises(tmp_path, monkeypatch):
@@ -190,6 +205,17 @@ def test_run_with_local_scratch_copies_and_summarises(tmp_path, monkeypatch):
     for key in ("git_hash", "coverage", "ring_layout", "band_assignment", "ratchet_len", "reset_min", "seed"):
         assert key in prov
     assert prov["seed"] == 1 and prov["workdir"] != prov["outdir"]
-    assert len(s["nights"]) == 5 and set(s["span"]) == {"g", "rho"}
+    assert len(s["nights"]) == 5 and set(s["span"]) == {"beta", "rho"}
     with open(out / "night_summary.csv") as f:
         assert len(f.read().strip().splitlines()) == 6
+
+
+def test_configure_rejects_unknown_cycle_band(tmp_path):
+    """A --cycle naming a band that is not a survey band (here beta's old name) fails before the run starts."""
+    from argus_sim.config import ConfigException
+
+    a = drv.build_parser().parse_args(
+        ["--start", "2026-06-14T12:00", "--n-nights", "2", "--outdir", "o", "--cycle", "g,rho"]
+    )
+    with pytest.raises(ConfigException, match="Unknown filter bands"):
+        drv.configure(a, str(tmp_path))

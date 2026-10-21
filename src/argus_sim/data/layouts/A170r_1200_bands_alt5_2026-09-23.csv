@@ -1,8 +1,8 @@
 # Band per OTA for the A170r_1200 layout: alternation-optimised table.
-# band: b = the cycle's first band (ArgusSim 'g'), rho = the other.  600 b / 600 rho.
+# band: b = the cycle's first band (beta), rho = the other.  600 b / 600 rho.
 # Layout: A170r_1200_telescopes.csv (sha256 0d2b3154541c5f08...), compass az = CSV az + 90.
 # Objective: area-weighted fraction of sky whose band set differs between consecutive 16-min ratchets (15 x 60 s + 1 min
-# reset, sky step 4.011 deg; overlap credited), subject to per-0.5-deg-dec-line g/rho exposure balance within 5% on all
+# reset, sky step 4.011 deg; overlap credited), subject to per-0.5-deg-dec-line beta/rho exposure balance within 5% on all
 # 211 lines.  Array-frame alternation 0.8492 at 4.011 deg (upper bound 0.9608; strip rule 0.653); exact coverage
 # engine over one summer season 0.8493; largest dec-line imbalance 0.037.
 # Exactly E/W mirror-antisymmetric: all 598 twin pairs of OTAs carry opposite bands.

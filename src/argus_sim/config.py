@@ -12,10 +12,12 @@ import astropy.units as u
 import tosholi
 from dacite.exceptions import MissingValueError
 
+from .throughput import SURVEY_BANDS
+
 _RAD_TO_ARCSEC = 180 / math.pi * 3600
 
 _PACKAGE_DATA = Path(__file__).resolve().parent / "data"
-# Delivered optics PSF: optics-only images at 7 field angles for a blue (g) and a red (rho) band, sampled at half a
+# Delivered optics PSF: optics-only images at 7 field angles for the two survey bands, beta and rho, sampled at half a
 # detector pixel.  Their EE50 diameters, before seeing and after pixelisation, lie between 2.0 and 3.0 px across the
 # field, with an area mean of 2.3 px over the sensor.
 DEFAULT_PSF_FITS = str(_PACKAGE_DATA / "delivered_psf.fits")
@@ -157,10 +159,20 @@ class PackingStrategy:
 class FilterStrategy:
     """Filter strategy parameters."""
 
-    # beta (named "g" in the code) and rho at 1:1
-    options: List = dataclasses.field(default_factory=lambda: ["g", "rho", "g", "rho"])
-    band: str = "g"
+    # beta and rho at 1:1
+    options: List = dataclasses.field(default_factory=lambda: ["beta", "rho", "beta", "rho"])
+    band: str = "beta"
     cell_size: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        """Check the bands on construction."""
+        self.validate()
+
+    def validate(self) -> None:
+        """Raise ConfigException unless every band in ``options`` and ``band`` is a survey band."""
+        unknown = sorted((set(self.options) | {self.band}) - set(SURVEY_BANDS))
+        if unknown:
+            raise ConfigException(f"Unknown filter bands {unknown}; the survey bands are {list(SURVEY_BANDS)}.")
 
 
 @dataclasses.dataclass

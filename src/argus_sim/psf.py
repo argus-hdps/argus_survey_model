@@ -22,10 +22,6 @@ MOFFAT_BETA_KOLMOGOROV = 4.765
 if TYPE_CHECKING:
     from .config import Config
 
-# Maps simulation bands onto the bands of the delivered PSF file.  The file holds a blue PSF ("g") and a red one
-# ("rho"); every red or broad band uses the "rho" PSF.
-_BAND_MAP = {"A": "rho", "r": "rho", "i": "rho", "r+i": "rho"}
-
 
 @jit(nopython=True)
 def gaus2d(x: float, y: float, mx: float, my: float, sx: float, sy: float) -> float:
@@ -416,7 +412,7 @@ def _match_ee50(
 def load_ee50_profile(path: str) -> dict[str, tuple[np.ndarray, np.ndarray]]:
     """Read an EE50 profile CSV with columns ``band, theta_deg, target_um``.
 
-    ``band`` is a PSF-file band name (``g``, ``rho``).  ``target_um`` is the optics-only EE50 diameter in microns
+    ``band`` is a survey band name (``beta``, ``rho``).  ``target_um`` is the optics-only EE50 diameter in microns
     wanted at field angle ``theta_deg``.  Rows are sorted by field angle per band; ``DeliveredPSF.with_seeing``
     interpolates linearly in angle.
     """
@@ -440,7 +436,7 @@ class DeliveredPSF:
     ``OVERSAMP`` times finer than the detector pixel.  Each call convolves atmospheric seeing, bins to detector
     pixels at a chosen sub-pixel phase and cuts a stamp.
 
-    The file has one binary-table extension with columns ``BAND`` (the PSF band, ``g`` or ``rho``), ``THETA``
+    The file has one binary-table extension with columns ``BAND`` (the survey band, ``beta`` or ``rho``), ``THETA``
     (field angle from the optical axis, degrees) and ``PSF`` (the ``NPIX x NPIX`` image, flattened), and header
     keywords ``OVERSAMP`` and ``NPIX``.
 
@@ -459,7 +455,7 @@ class DeliveredPSF:
     stamp_size : int
         Output stamp size in pixels.
     ee50_profile : dict, optional
-        Optics-only EE50 target per PSF band: ``{band: (theta_deg, target_um)}``, see :func:`load_ee50_profile`.
+        Optics-only EE50 target per band: ``{band: (theta_deg, target_um)}``, see :func:`load_ee50_profile`.
         Where the target exceeds the tabulated PSF's EE50 diameter the PSF is broadened with a Gaussian to meet it;
         a smaller target leaves the PSF unchanged.
     randomize_pixel_phase : bool
@@ -504,10 +500,13 @@ class DeliveredPSF:
             rows = np.where(bands == band_str)[0]
             order = np.argsort(field_angles[rows])
             self._band_index[band_str] = (field_angles[rows][order], rows[order])
+        unknown = sorted(set(ee50_profile or {}) - set(self._band_index))
+        if unknown:
+            raise ValueError(f"EE50 profile bands {unknown} are not in the PSF file (bands {sorted(self._band_index)})")
 
     def field_angles(self, band: str) -> np.ndarray:
         """Tabulated field angles (degrees, increasing) for ``band``."""
-        return np.asarray(self._band_index[_BAND_MAP.get(band, band)][0], dtype=np.float64)
+        return np.asarray(self._band_index[band][0], dtype=np.float64)
 
     @classmethod
     def from_config(cls, cfg: Config, **overrides) -> DeliveredPSF:
@@ -542,7 +541,7 @@ class DeliveredPSF:
     def with_seeing(
         self,
         seeing: float,
-        band: str = "g",
+        band: str = "beta",
         rng: np.random.Generator | None = None,
         pixel_phase: Optional[tuple[float, float]] = None,
         return_optical_hfd: bool = False,
@@ -556,7 +555,7 @@ class DeliveredPSF:
         seeing : float
             Atmospheric seeing FWHM in arcseconds.
         band : str
-            Simulation band name (mapped to a PSF band internally).
+            Survey band name (``beta`` or ``rho``).
         rng : np.random.Generator, optional
             Random generator for the field position and pixel phase draws.
         pixel_phase : tuple[float, float], optional
@@ -589,10 +588,9 @@ class DeliveredPSF:
         """
         _rng = rng if rng is not None else np.random.default_rng()
 
-        psf_band = _BAND_MAP.get(band, band)
-        if psf_band not in self._band_index:
-            raise ValueError(f"Band '{band}' (mapped to '{psf_band}') not in the PSF file")
-        angles, rows = self._band_index[psf_band]
+        if band not in self._band_index:
+            raise ValueError(f"Band '{band}' not in the PSF file (bands {sorted(self._band_index)})")
+        angles, rows = self._band_index[band]
 
         if field_angle_deg is None:
             # Draw a random field position and find the nearest tabulated angle
@@ -606,7 +604,7 @@ class DeliveredPSF:
         spacing = self._spacing
         ds = self._oversample
 
-        profile = self.ee50_profile.get(psf_band) if self.ee50_profile else None
+        profile = self.ee50_profile.get(band) if self.ee50_profile else None
         if profile is not None:
             target_hfd = float(np.interp(float(angles[nearest_idx]), profile[0], profile[1]))
             psf = _match_ee50(psf, spacing, target_hfd=target_hfd)

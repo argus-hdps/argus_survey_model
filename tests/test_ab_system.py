@@ -14,7 +14,7 @@ def ab():
     return ABPhot(collecting_area=collecting_area, throughput_loss=1.0, throughput=tp)
 
 
-BANDS = ["V", "g", "r", "i", "A"]
+BANDS = ["V", "beta", "rho"]
 MAGNITUDES = [10.0, 14.0, 18.0, 22.0, 26.0, 30.0]
 
 
